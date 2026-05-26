@@ -20,6 +20,7 @@ const Version = "0.1.0"
 func main() {
 	cfgPath := flag.String("config", "config.example.yml", "path to config yaml")
 	pidPath := flag.String("pid", daemon.DefaultPIDPath, "path to PID file")
+	flag.Usage = printGeneralHelp
 	flag.Parse()
 
 	args := flag.Args()
