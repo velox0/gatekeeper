@@ -1,8 +1,10 @@
 package session
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"log"
 	"sync"
 	"time"
 )
@@ -70,3 +72,40 @@ func (s *InMemoryStore) Delete(id string) {
 	delete(s.sessions, id)
 	s.mu.Unlock()
 }
+
+// Reap removes all expired sessions from the store and returns
+// the number of sessions that were removed.
+func (s *InMemoryStore) Reap() int {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	reaped := 0
+	for id, sess := range s.sessions {
+		if sess.ExpiresAt.Before(now) {
+			delete(s.sessions, id)
+			reaped++
+		}
+	}
+	return reaped
+}
+
+// StartReaper launches a background goroutine that periodically removes
+// expired sessions. It stops when the provided context is cancelled.
+func (s *InMemoryStore) StartReaper(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if n := s.Reap(); n > 0 {
+					log.Printf("session reaper: removed %d expired session(s)", n)
+				}
+			}
+		}
+	}()
+}
+

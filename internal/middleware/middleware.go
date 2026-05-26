@@ -7,9 +7,6 @@ import (
 	"github.com/velox0/gatekeeper/internal/session"
 )
 
-func NewMux() *http.ServeMux {
-	return http.NewServeMux()
-}
 
 // RequireAuth wraps a handler and enforces session cookie presence and validity.
 func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store *session.InMemoryStore) http.Handler {

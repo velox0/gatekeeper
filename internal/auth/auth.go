@@ -18,6 +18,14 @@ import (
 //go:embed login.html
 var loginPage embed.FS
 
+// dummyHash is used when a username is not found, so that bcrypt.CompareHashAndPassword
+// is always called regardless. This prevents timing-based username enumeration.
+var dummyHash = []byte("$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+
+// maxBcryptPasswordLen is the maximum password length bcrypt supports.
+// Passwords longer than this are silently truncated by bcrypt, weakening security.
+const maxBcryptPasswordLen = 72
+
 type Handler struct {
 	rc    *config.ResolvedConfig
 	store *session.InMemoryStore
@@ -72,20 +80,25 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		username := r.PostForm.Get("username")
 		password := r.PostForm.Get("password")
 
-		// find user in the resolved (merged) user list
-		users := h.rc.GetResolvedUsers()
-		var found *config.UserConfig
-		for i := range users {
-			if users[i].Username == username {
-				found = &users[i]
-				break
-			}
-		}
-		if found == nil {
+		if len(password) > maxBcryptPasswordLen {
 			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
 			return
 		}
-		if err := bcrypt.CompareHashAndPassword([]byte(found.PasswordHash), []byte(password)); err != nil {
+
+		// find user in the resolved (merged) user list
+		users := h.rc.GetResolvedUsers()
+		var hash []byte
+		for i := range users {
+			if users[i].Username == username {
+				hash = []byte(users[i].PasswordHash)
+				break
+			}
+		}
+		// Always call bcrypt to prevent timing-based username enumeration.
+		if hash == nil {
+			hash = dummyHash
+		}
+		if err := bcrypt.CompareHashAndPassword(hash, []byte(password)); err != nil {
 			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
 			return
 		}

@@ -160,7 +160,12 @@ func LoadEnabled(enabled map[string]bool) ([]LoadedPlugin, error) {
 	if err != nil {
 		return nil, err
 	}
+	return loadEnabledFrom(pluginDir, enabled)
+}
 
+// loadEnabledFrom is the testable core of LoadEnabled. It reads plugin
+// assets from the given base directory.
+func loadEnabledFrom(pluginDir string, enabled map[string]bool) ([]LoadedPlugin, error) {
 	var loaded []LoadedPlugin
 	for name, on := range enabled {
 		if !on {

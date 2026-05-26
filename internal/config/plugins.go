@@ -386,14 +386,15 @@ func addPlugin(name, srcPath string) {
 		}
 		ext := filepath.Ext(entry.Name())
 		base := entry.Name()
-		if ext == ".css" {
+		switch ext {
+		case ".css":
 			// Prioritize exact match name.css
 			if base == name+".css" {
 				cssSrc = filepath.Join(srcPath, entry.Name())
 			} else if cssSrc == "" {
 				cssSrc = filepath.Join(srcPath, entry.Name())
 			}
-		} else if ext == ".js" {
+		case ".js":
 			// Prioritize exact match name.js
 			if base == name+".js" {
 				jsSrc = filepath.Join(srcPath, entry.Name())

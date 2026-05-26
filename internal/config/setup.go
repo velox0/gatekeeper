@@ -68,7 +68,7 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(path, []byte(defaultConfigContent), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(defaultConfigContent), 0600); err != nil {
 		fmt.Fprintf(os.Stderr, "error writing config file: %v\n", err)
 		os.Exit(1)
 	}

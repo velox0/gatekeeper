@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"golang.org/x/crypto/bcrypt"
@@ -10,6 +9,10 @@ import (
 
 	"github.com/velox0/gatekeeper/internal/daemon"
 )
+
+// maxBcryptPasswordLen is the maximum password length bcrypt supports.
+// Passwords longer than this are silently truncated, weakening security.
+const maxBcryptPasswordLen = 72
 
 // HandleUserCommand parses and dispatches user management subcommands.
 // Usage:
@@ -68,10 +71,10 @@ func HandleUserCommand(cfgPath, pidPath string, args []string) {
 
 	// Signal the running daemon to reload config
 	if sigErr := daemon.SignalReload(pidPath); sigErr != nil {
-		log.Printf("warning: config saved but could not signal daemon: %v", sigErr)
-		log.Printf("the daemon will pick up changes on next restart")
+		fmt.Printf("warning: config saved but could not signal daemon: %v\n", sigErr)
+		fmt.Println("the daemon will pick up changes on next restart")
 	} else {
-		log.Println("config saved and daemon signaled to reload")
+		fmt.Println("config saved and daemon signaled to reload")
 	}
 }
 
@@ -84,6 +87,10 @@ func AddUser(cfgPath, username, password string) error {
 
 	refs := ListServerBlocks(cfg)
 	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
+
+	if len(password) > maxBcryptPasswordLen {
+		return fmt.Errorf("password exceeds maximum length of %d bytes", maxBcryptPasswordLen)
+	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -198,6 +205,10 @@ func UpdateUser(cfgPath, username, newPassword string) error {
 
 	refs := ListServerBlocks(cfg)
 	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
+
+	if len(newPassword) > maxBcryptPasswordLen {
+		return fmt.Errorf("password exceeds maximum length of %d bytes", maxBcryptPasswordLen)
+	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {

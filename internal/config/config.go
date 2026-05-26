@@ -106,6 +106,8 @@ func (c *Config) Reload(path string) error {
 	}
 	c.mu.Lock()
 	c.AppName = fresh.AppName
+	c.Auth = fresh.Auth
+	c.Security = fresh.Security
 	c.Users = fresh.Users
 	c.Plugins = fresh.Plugins
 	c.Listeners = fresh.Listeners
@@ -115,10 +117,7 @@ func (c *Config) Reload(path string) error {
 	return nil
 }
 
-// ReloadUsers is kept for backward compatibility; it delegates to Reload.
-func (c *Config) ReloadUsers(path string) error {
-	return c.Reload(path)
-}
+
 
 // SaveConfig marshals the config and writes it to the given path,
 // preserving any comments that exist in the original file.
@@ -149,7 +148,7 @@ func SaveConfig(cfg *Config, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal final config: %w", err)
 	}
-	return os.WriteFile(path, out, 0644)
+	return os.WriteFile(path, out, 0600)
 }
 
 // transferComments recursively copies HeadComment, LineComment, and

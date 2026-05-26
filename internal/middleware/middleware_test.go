@@ -56,3 +56,55 @@ func TestRequireAuthAddsUpstreamHeaders(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
 	}
 }
+
+func TestRequireAuthReturns401ForJSONRequests(t *testing.T) {
+	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}), rc, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRequireAuthReturns401ForXHRRequests(t *testing.T) {
+	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}), rc, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRequireAuthSkipsLoginAndHealthPaths(t *testing.T) {
+	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}), rc, store)
+
+	for _, path := range []string{"/login", "/health"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("path %s: status = %d, want %d", path, rec.Code, http.StatusOK)
+		}
+	}
+}

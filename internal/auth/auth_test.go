@@ -131,3 +131,66 @@ func findOptionalCookie(cookies []*http.Cookie, name string) *http.Cookie {
 	}
 	return nil
 }
+
+func TestLogoutClearsSessionAndCookie(t *testing.T) {
+	handler, store := newTestHandler(t)
+
+	// Create a session first.
+	sess, err := store.Create("admin", time.Hour)
+	if err != nil {
+		t.Fatalf("Create session: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	req.AddCookie(&http.Cookie{Name: "sid", Value: sess.ID})
+	rec := httptest.NewRecorder()
+
+	handler.LogoutHandler(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
+	}
+
+	// Session should be deleted from the store.
+	if _, ok := store.Get(sess.ID); ok {
+		t.Fatal("session should have been deleted after logout")
+	}
+
+	// Cookie should be expired.
+	cookie := findCookie(t, rec.Result().Cookies(), "sid")
+	if cookie.MaxAge != -1 {
+		t.Fatalf("cookie MaxAge = %d, want -1", cookie.MaxAge)
+	}
+}
+
+func TestLoginMethodNotAllowed(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	rec := httptest.NewRecorder()
+
+	handler.LoginHandler(rec, httptest.NewRequest(http.MethodDelete, "/login", nil))
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestLoginPostRejectsUnknownUser(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	form := url.Values{
+		"username": {"nonexistent"},
+		"password": {"secret"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+
+	handler.LoginHandler(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
+	}
+	location := rec.Header().Get("Location")
+	if !strings.Contains(location, "/login") || !strings.Contains(location, "error=") {
+		t.Fatalf("Location = %q, want redirect to /login with error param", location)
+	}
+}
