@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed assets
@@ -69,6 +70,61 @@ func PopulateDefaults() error {
 		}
 
 		log.Printf("seeding default plugin asset: %s", dest)
+		return os.WriteFile(dest, data, 0644)
+	})
+}
+
+// UpdateDefaults overwrites the default plugin assets in ~/.gatekeeper/<name>/
+// with the embedded defaults. If targetName is non-empty, only that specific
+// default plugin is updated. Otherwise, all default plugins are updated.
+func UpdateDefaults(targetName string) error {
+	pluginDir, err := PluginDir()
+	if err != nil {
+		return err
+	}
+
+	return fs.WalkDir(defaultAssets, "assets", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Compute the relative path after "assets/"
+		rel, err := filepath.Rel("assets", path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+
+		// Check if we need to filter by a specific plugin name
+		cleanRel := filepath.ToSlash(rel)
+		segments := strings.Split(cleanRel, "/")
+		if len(segments) == 0 || segments[0] == "" {
+			return nil
+		}
+		pluginName := segments[0]
+
+		if targetName != "" && pluginName != targetName {
+			return nil
+		}
+
+		dest := filepath.Join(pluginDir, rel)
+
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+
+		data, err := defaultAssets.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read embedded %s: %w", path, err)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+			return err
+		}
+
+		log.Printf("updating default plugin asset: %s", dest)
 		return os.WriteFile(dest, data, 0644)
 	})
 }
