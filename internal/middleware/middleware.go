@@ -12,14 +12,14 @@ func NewMux() *http.ServeMux {
 }
 
 // RequireAuth wraps a handler and enforces session cookie presence and validity.
-func RequireAuth(next http.Handler, cfg *config.Config, store *session.InMemoryStore) http.Handler {
+func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store *session.InMemoryStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// paths that don't require auth
 		if r.URL.Path == "/login" || r.URL.Path == "/health" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		c, err := r.Cookie(cfg.Auth.CookieName)
+		c, err := r.Cookie(rc.Auth.CookieName)
 		if err != nil || c.Value == "" {
 			// redirect to login for browser requests
 			if r.Header.Get("Accept") == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {

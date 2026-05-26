@@ -20,8 +20,12 @@ func writeConfig(t *testing.T, body string) string {
 
 func TestLoadConfigAppliesDefaults(t *testing.T) {
 	cfg, err := LoadConfig(writeConfig(t, `
-upstream:
-  target: "http://localhost:3000"
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
 `))
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
@@ -39,8 +43,12 @@ func TestLoadConfigParsesDuration(t *testing.T) {
 	cfg, err := LoadConfig(writeConfig(t, `
 auth:
   session_ttl: 30m
-upstream:
-  target: "https://example.com"
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "https://example.com"
 `))
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
@@ -59,20 +67,37 @@ func TestLoadConfigValidatesUpstreamTarget(t *testing.T) {
 	}{
 		{
 			name: "missing",
-			body: `{}`,
+			body: `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: ""
+`,
 			want: "upstream target is required",
 		},
 		{
 			name: "relative",
-			body: `upstream:
-  target: "localhost:3000"
+			body: `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "localhost:3000"
 `,
 			want: "absolute URL",
 		},
 		{
 			name: "unsupported scheme",
-			body: `upstream:
-  target: "ftp://example.com"
+			body: `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "ftp://example.com"
 `,
 			want: "http or https",
 		},
@@ -88,5 +113,102 @@ func TestLoadConfigValidatesUpstreamTarget(t *testing.T) {
 				t.Fatalf("error = %q, want it to contain %q", err.Error(), tt.want)
 			}
 		})
+	}
+}
+
+func TestLoadConfigRequiresListeners(t *testing.T) {
+	_, err := LoadConfig(writeConfig(t, `{}`))
+	if err == nil {
+		t.Fatal("LoadConfig should fail with no listeners")
+	}
+	if !strings.Contains(err.Error(), "at least one listener") {
+		t.Fatalf("error = %q, want 'at least one listener'", err.Error())
+	}
+}
+
+func TestLoadConfigRejectsDuplicateListenAddr(t *testing.T) {
+	_, err := LoadConfig(writeConfig(t, `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: a.local
+        upstream:
+          target: "http://localhost:3000"
+  - listen: ":8080"
+    servers:
+      - server_name: b.local
+        upstream:
+          target: "http://localhost:4000"
+`))
+	if err == nil {
+		t.Fatal("LoadConfig should fail with duplicate listen address")
+	}
+	if !strings.Contains(err.Error(), "duplicate listen address") {
+		t.Fatalf("error = %q, want 'duplicate listen address'", err.Error())
+	}
+}
+
+func TestLoadConfigRejectsDuplicateServerName(t *testing.T) {
+	_, err := LoadConfig(writeConfig(t, `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:4000"
+`))
+	if err == nil {
+		t.Fatal("LoadConfig should fail with duplicate server_name")
+	}
+	if !strings.Contains(err.Error(), "duplicate server_name") {
+		t.Fatalf("error = %q, want 'duplicate server_name'", err.Error())
+	}
+}
+
+func TestLoadConfigMultipleListenersAndServers(t *testing.T) {
+	cfg, err := LoadConfig(writeConfig(t, `
+auth:
+  cookie_name: gk
+users:
+  - username: admin
+    password_hash: hash
+plugins:
+  hearts: true
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+        routes:
+          - path: /
+            auth: true
+      - server_name: docs.local
+        upstream:
+          target: "http://localhost:4000"
+  - listen: ":9090"
+    servers:
+      - server_name: admin.local
+        upstream:
+          target: "http://localhost:5000"
+        users:
+          - username: superadmin
+            password_hash: shash
+`))
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+
+	if len(cfg.Listeners) != 2 {
+		t.Fatalf("listeners = %d, want 2", len(cfg.Listeners))
+	}
+	if len(cfg.Listeners[0].Servers) != 2 {
+		t.Fatalf("listener[0].servers = %d, want 2", len(cfg.Listeners[0].Servers))
+	}
+	if cfg.Listeners[1].Servers[0].ServerName != "admin.local" {
+		t.Fatalf("listener[1].server[0].server_name = %q, want admin.local", cfg.Listeners[1].Servers[0].ServerName)
 	}
 }

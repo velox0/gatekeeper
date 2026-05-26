@@ -11,11 +11,11 @@ import (
 )
 
 func TestRequireAuthRedirectsMissingSession(t *testing.T) {
-	cfg := &config.Config{Auth: config.AuthConfig{CookieName: "sid"}}
+	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
 	store := session.NewInMemoryStore()
 	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("next handler should not be called")
-	}), cfg, store)
+	}), rc, store)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
@@ -29,7 +29,7 @@ func TestRequireAuthRedirectsMissingSession(t *testing.T) {
 }
 
 func TestRequireAuthAddsUpstreamHeaders(t *testing.T) {
-	cfg := &config.Config{Auth: config.AuthConfig{CookieName: "sid"}}
+	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
 	store := session.NewInMemoryStore()
 	sess, err := store.Create("admin", time.Hour)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestRequireAuthAddsUpstreamHeaders(t *testing.T) {
 			t.Fatalf("X-Authenticated = %q, want true", got)
 		}
 		w.WriteHeader(http.StatusNoContent)
-	}), cfg, store)
+	}), rc, store)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "sid", Value: sess.ID})

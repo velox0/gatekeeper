@@ -64,97 +64,157 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 	}
 }
 
-// AddUser hashes the password with bcrypt, appends the user to the config, and saves it.
+// AddUser hashes the password with bcrypt and adds the user to the selected scope(s).
 func AddUser(cfgPath, username, password string) error {
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	// Check for duplicate
-	for _, u := range cfg.Users {
-		if u.Username == username {
-			return fmt.Errorf("user %q already exists", username)
-		}
-	}
+	refs := ListServerBlocks(cfg)
+	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	cfg.Users = append(cfg.Users, UserConfig{
+	newUser := UserConfig{
 		Username:     username,
 		PasswordHash: string(hash),
-	})
+	}
+
+	if globalSelected {
+		// Check for duplicate in global scope
+		for _, u := range cfg.Users {
+			if u.Username == username {
+				return fmt.Errorf("user %q already exists in global scope", username)
+			}
+		}
+		cfg.Users = append(cfg.Users, newUser)
+		fmt.Printf("user %q added to global scope\n", username)
+	}
+
+	for _, ref := range selectedRefs {
+		srv := &cfg.Listeners[ref.ListenerIdx].Servers[ref.ServerIdx]
+		// Check for duplicate in this server block
+		for _, u := range srv.Users {
+			if u.Username == username {
+				return fmt.Errorf("user %q already exists in server block %s → %s", username, ref.Listen, ref.ServerName)
+			}
+		}
+		srv.Users = append(srv.Users, newUser)
+		fmt.Printf("user %q added to %s → %s\n", username, ref.Listen, ref.ServerName)
+	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
 
-	fmt.Printf("user %q added\n", username)
 	return nil
 }
 
-// RemoveUser removes the user with the given username from the config and saves it.
+// RemoveUser removes the user from the selected scope(s).
 func RemoveUser(cfgPath, username string) error {
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	found := false
-	filtered := make([]UserConfig, 0, len(cfg.Users))
-	for _, u := range cfg.Users {
-		if u.Username == username {
-			found = true
-			continue
+	refs := ListServerBlocks(cfg)
+	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
+
+	if globalSelected {
+		found := false
+		filtered := make([]UserConfig, 0, len(cfg.Users))
+		for _, u := range cfg.Users {
+			if u.Username == username {
+				found = true
+				continue
+			}
+			filtered = append(filtered, u)
 		}
-		filtered = append(filtered, u)
+		if !found {
+			return fmt.Errorf("user %q not found in global scope", username)
+		}
+		cfg.Users = filtered
+		fmt.Printf("user %q removed from global scope\n", username)
 	}
 
-	if !found {
-		return fmt.Errorf("user %q not found", username)
+	for _, ref := range selectedRefs {
+		srv := &cfg.Listeners[ref.ListenerIdx].Servers[ref.ServerIdx]
+		found := false
+		filtered := make([]UserConfig, 0, len(srv.Users))
+		for _, u := range srv.Users {
+			if u.Username == username {
+				found = true
+				continue
+			}
+			filtered = append(filtered, u)
+		}
+		if !found {
+			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, ref.ServerName)
+		}
+		srv.Users = filtered
+		fmt.Printf("user %q removed from %s → %s\n", username, ref.Listen, ref.ServerName)
 	}
-
-	cfg.Users = filtered
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
 
-	fmt.Printf("user %q removed\n", username)
 	return nil
 }
 
-// UpdateUser updates the password hash for an existing user and saves the config.
+// UpdateUser updates the password hash for an existing user in the selected scope(s).
 func UpdateUser(cfgPath, username, newPassword string) error {
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	found := false
-	for i := range cfg.Users {
-		if cfg.Users[i].Username == username {
-			hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-			if err != nil {
-				return fmt.Errorf("hash password: %w", err)
-			}
-			cfg.Users[i].PasswordHash = string(hash)
-			found = true
-			break
-		}
+	refs := ListServerBlocks(cfg)
+	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
 	}
 
-	if !found {
-		return fmt.Errorf("user %q not found", username)
+	if globalSelected {
+		found := false
+		for i := range cfg.Users {
+			if cfg.Users[i].Username == username {
+				cfg.Users[i].PasswordHash = string(hash)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("user %q not found in global scope", username)
+		}
+		fmt.Printf("user %q updated in global scope\n", username)
+	}
+
+	for _, ref := range selectedRefs {
+		srv := &cfg.Listeners[ref.ListenerIdx].Servers[ref.ServerIdx]
+		found := false
+		for i := range srv.Users {
+			if srv.Users[i].Username == username {
+				srv.Users[i].PasswordHash = string(hash)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, ref.ServerName)
+		}
+		fmt.Printf("user %q updated in %s → %s\n", username, ref.Listen, ref.ServerName)
 	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
 
-	fmt.Printf("user %q updated\n", username)
 	return nil
 }

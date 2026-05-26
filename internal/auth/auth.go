@@ -19,7 +19,7 @@ import (
 var loginPage embed.FS
 
 type Handler struct {
-	cfg   *config.Config
+	rc    *config.ResolvedConfig
 	store *session.InMemoryStore
 	tmpl  *template.Template
 }
@@ -30,18 +30,18 @@ type loginData struct {
 	Plugins []plugins.LoadedPlugin
 }
 
-func NewHandler(cfg *config.Config, store *session.InMemoryStore) (*Handler, error) {
+func NewHandler(rc *config.ResolvedConfig, store *session.InMemoryStore) (*Handler, error) {
 	t, err := template.ParseFS(loginPage, "login.html")
 	if err != nil {
 		return nil, err
 	}
-	return &Handler{cfg: cfg, store: store, tmpl: t}, nil
+	return &Handler{rc: rc, store: store, tmpl: t}, nil
 }
 
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		loaded, err := plugins.LoadEnabled(h.cfg.GetPlugins())
+		loaded, err := plugins.LoadEnabled(h.rc.GetResolvedPlugins())
 		if err != nil {
 			log.Printf("warning: failed to load plugin assets: %v", err)
 		}
@@ -70,8 +70,8 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		username := r.PostForm.Get("username")
 		password := r.PostForm.Get("password")
 
-		// find user
-		users := h.cfg.GetUsers()
+		// find user in the resolved (merged) user list
+		users := h.rc.GetResolvedUsers()
 		var found *config.UserConfig
 		for i := range users {
 			if users[i].Username == username {
@@ -88,18 +88,18 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		sess, err := h.store.Create(username, h.cfg.Auth.SessionTTL)
+		sess, err := h.store.Create(username, h.rc.Auth.SessionTTL)
 		if err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
 		cookie := &http.Cookie{
-			Name:     h.cfg.Auth.CookieName,
+			Name:     h.rc.Auth.CookieName,
 			Value:    sess.ID,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.cfg.Security.SecureCookies,
+			Secure:   h.rc.Security.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
 			Expires:  sess.ExpiresAt,
 		}
@@ -119,18 +119,18 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	c, err := r.Cookie(h.cfg.Auth.CookieName)
+	c, err := r.Cookie(h.rc.Auth.CookieName)
 	if err == nil {
 		h.store.Delete(c.Value)
 		// clear cookie
 		http.SetCookie(w, &http.Cookie{
-			Name:     h.cfg.Auth.CookieName,
+			Name:     h.rc.Auth.CookieName,
 			Value:    "",
 			Path:     "/",
 			Expires:  time.Unix(0, 0),
 			MaxAge:   -1,
 			HttpOnly: true,
-			Secure:   h.cfg.Security.SecureCookies,
+			Secure:   h.rc.Security.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
 		})
 	}

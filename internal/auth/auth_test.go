@@ -23,7 +23,7 @@ func newTestHandler(t *testing.T) (*Handler, *session.InMemoryStore) {
 	}
 
 	store := session.NewInMemoryStore()
-	handler, err := NewHandler(&config.Config{
+	rc := &config.ResolvedConfig{
 		Auth: config.AuthConfig{
 			CookieName: "sid",
 			SessionTTL: time.Hour,
@@ -35,7 +35,8 @@ func newTestHandler(t *testing.T) (*Handler, *session.InMemoryStore) {
 			},
 		},
 		Plugins: map[string]bool{},
-	}, store)
+	}
+	handler, err := NewHandler(rc, store)
 	if err != nil {
 		t.Fatalf("NewHandler returned error: %v", err)
 	}

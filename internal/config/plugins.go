@@ -91,6 +91,9 @@ func listPlugins(cfgPath string) {
 	}
 
 	plugins := KnownPlugins()
+
+	// Show global plugin state
+	fmt.Println("=== Global Plugins ===")
 	fmt.Printf("%-12s %-8s %s\n", "PLUGIN", "STATUS", "DESCRIPTION")
 	for _, p := range plugins {
 		status := "disabled"
@@ -98,6 +101,26 @@ func listPlugins(cfgPath string) {
 			status = "enabled"
 		}
 		fmt.Printf("%-12s %-8s %s\n", p.Name, status, p.Description)
+	}
+
+	// Show per-server-block overrides
+	for _, ln := range cfg.Listeners {
+		for _, srv := range ln.Servers {
+			if len(srv.Plugins) == 0 {
+				continue
+			}
+			fmt.Printf("\n=== %s → %s (overrides) ===\n", ln.Listen, srv.ServerName)
+			fmt.Printf("%-12s %-8s\n", "PLUGIN", "STATUS")
+			for _, p := range plugins {
+				if v, ok := srv.Plugins[p.Name]; ok {
+					status := "disabled"
+					if v {
+						status = "enabled"
+					}
+					fmt.Printf("%-12s %-8s\n", p.Name, status)
+				}
+			}
+		}
 	}
 }
 
@@ -117,21 +140,38 @@ func setPlugin(cfgPath, pidPath, name string, enabled bool) {
 		os.Exit(1)
 	}
 
-	if cfg.Plugins == nil {
-		cfg.Plugins = make(map[string]bool)
+	refs := ListServerBlocks(cfg)
+	globalSelected, selectedRefs := PromptServerBlockSelection(refs, true)
+
+	if globalSelected {
+		if cfg.Plugins == nil {
+			cfg.Plugins = make(map[string]bool)
+		}
+		cfg.Plugins[name] = enabled
+		verb := "disabled"
+		if enabled {
+			verb = "enabled"
+		}
+		fmt.Printf("plugin %q %s in global scope\n", name, verb)
 	}
-	cfg.Plugins[name] = enabled
+
+	for _, ref := range selectedRefs {
+		srv := &cfg.Listeners[ref.ListenerIdx].Servers[ref.ServerIdx]
+		if srv.Plugins == nil {
+			srv.Plugins = make(map[string]bool)
+		}
+		srv.Plugins[name] = enabled
+		verb := "disabled"
+		if enabled {
+			verb = "enabled"
+		}
+		fmt.Printf("plugin %q %s in %s → %s\n", name, verb, ref.Listen, ref.ServerName)
+	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-
-	verb := "disabled"
-	if enabled {
-		verb = "enabled"
-	}
-	fmt.Printf("plugin %q %s\n", name, verb)
 
 	// Signal the running daemon to reload config
 	if sigErr := daemon.SignalReload(pidPath); sigErr != nil {
