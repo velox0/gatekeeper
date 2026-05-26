@@ -301,8 +301,7 @@
     </style>
 
     <!-- ═══ Plugin CSS (loaded from ~/.gatekeeper/<name>/<name>.css) ═══ -->
-    {{range .Plugins}}{{if .CSS}}<style>{{.CSS}}</style>{{end}}
-    {{end}}
+    {{range .Plugins}}{{.RenderCSS}}{{end}}
   </head>
   <body>
     <!-- Background elements -->
@@ -351,7 +350,6 @@
     </div>
 
     <!-- ═══ Plugin JS (loaded from ~/.gatekeeper/<name>/<name>.js) ═══ -->
-    {{range .Plugins}}{{if .JS}}<script>{{.JS}}</script>{{end}}
-    {{end}}
+    {{range .Plugins}}{{.RenderJS}}{{end}}
   </body>
 </html>

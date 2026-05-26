@@ -80,6 +80,22 @@ type LoadedPlugin struct {
 	JS   template.JS
 }
 
+// RenderCSS returns the CSS wrapped in a <style> tag, or empty HTML if no CSS is defined.
+func (p LoadedPlugin) RenderCSS() template.HTML {
+	if p.CSS == "" {
+		return ""
+	}
+	return template.HTML("<style>\n" + string(p.CSS) + "\n</style>")
+}
+
+// RenderJS returns the JS wrapped in a <script> tag, or empty HTML if no JS is defined.
+func (p LoadedPlugin) RenderJS() template.HTML {
+	if p.JS == "" {
+		return ""
+	}
+	return template.HTML("<script>\n" + string(p.JS) + "\n</script>")
+}
+
 // LoadEnabled reads CSS and JS files from ~/.gatekeeper/<name>/ for each
 // enabled plugin. Missing files are silently skipped (a plugin may have
 // only CSS or only JS).
