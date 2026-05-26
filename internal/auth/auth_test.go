@@ -34,6 +34,7 @@ func newTestHandler(t *testing.T) (*Handler, *session.InMemoryStore) {
 				PasswordHash: string(hash),
 			},
 		},
+		Plugins: map[string]bool{},
 	}, store)
 	if err != nil {
 		t.Fatalf("NewHandler returned error: %v", err)
@@ -54,7 +55,7 @@ func TestLoginGetRendersForm(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want text/html; charset=utf-8", got)
 	}
-	if !strings.Contains(rec.Body.String(), `<form method="post" action="/login">`) {
+	if !strings.Contains(rec.Body.String(), `action="/login"`) {
 		t.Fatalf("login response did not include the login form")
 	}
 }
@@ -99,8 +100,12 @@ func TestLoginPostRejectsInvalidPassword(t *testing.T) {
 
 	handler.LoginHandler(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
+	}
+	location := rec.Header().Get("Location")
+	if !strings.Contains(location, "/login") || !strings.Contains(location, "error=") {
+		t.Fatalf("Location = %q, want redirect to /login with error param", location)
 	}
 	if cookie := findOptionalCookie(rec.Result().Cookies(), "sid"); cookie != nil {
 		t.Fatalf("unexpected session cookie: %v", cookie)

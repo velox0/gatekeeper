@@ -1,0 +1,48 @@
+.aurora-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.45;
+}
+
+.aurora-band {
+  position: absolute;
+  width: 200%;
+  left: -50%;
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: aurora-sway ease-in-out infinite alternate;
+}
+
+.aurora-band-1 {
+  top: -20%;
+  height: 200px;
+  background: linear-gradient(90deg, rgba(124,92,252,0.3), rgba(59,130,246,0.2), rgba(167,139,250,0.25));
+  animation-duration: 8s;
+}
+
+.aurora-band-2 {
+  top: 5%;
+  height: 150px;
+  background: linear-gradient(90deg, rgba(52,211,153,0.2), rgba(59,130,246,0.15), rgba(124,92,252,0.2));
+  animation-duration: 11s;
+  animation-delay: -3s;
+}
+
+.aurora-band-3 {
+  top: 15%;
+  height: 120px;
+  background: linear-gradient(90deg, rgba(167,139,250,0.15), rgba(52,211,153,0.12), rgba(59,130,246,0.18));
+  animation-duration: 14s;
+  animation-delay: -7s;
+}
+
+@keyframes aurora-sway {
+  0%   { transform: translateX(-10%) skewX(-5deg); }
+  100% { transform: translateX(10%) skewX(5deg); }
+}

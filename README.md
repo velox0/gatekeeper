@@ -1,6 +1,6 @@
 # Gatekeeper
 
-Lightweight reverse proxy + session authentication gateway (MVP).
+Lightweight reverse proxy + session authentication gateway.
 
 Quickstart
 

@@ -1,0 +1,8 @@
+.matrix-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.25;
+  pointer-events: none;
+  /* Canvas draws programmatically using theme colors from JS */
+}

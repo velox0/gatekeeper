@@ -3,57 +3,355 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Gatekeeper Login</title>
+    <meta name="description" content="Gatekeeper — secure authentication gateway login" />
+    <title>Gatekeeper — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+      /* ───── Reset & Base ───── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg-deep:   #06060f;
+        --bg-mid:    #0d0d1f;
+        --card-bg:   rgba(255, 255, 255, 0.04);
+        --card-border: rgba(255, 255, 255, 0.08);
+        --text:      #e4e4ef;
+        --text-dim:  #8888a4;
+        --accent:    #7c5cfc;
+        --accent-2:  #a78bfa;
+        --accent-glow: rgba(124, 92, 252, 0.35);
+        --danger:    #f87171;
+        --input-bg:  rgba(255, 255, 255, 0.05);
+        --input-border: rgba(255, 255, 255, 0.1);
+        --input-focus: rgba(124, 92, 252, 0.5);
+        --radius:    12px;
+        --font:      'Inter', system-ui, -apple-system, sans-serif;
+      }
+
       body {
-        font-family:
-          system-ui,
-          Segoe UI,
-          Roboto,
-          Arial;
-        background: #f7fafc;
-        color: #111;
+        font-family: var(--font);
+        background: var(--bg-deep);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
       }
-      .wrap {
+
+      /* ───── Animated Background ───── */
+      .bg-gradient {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 20% 30%, rgba(124, 92, 252, 0.12) 0%, transparent 60%),
+          radial-gradient(ellipse 70% 50% at 80% 70%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+          radial-gradient(ellipse 50% 40% at 50% 100%, rgba(167, 139, 250, 0.06) 0%, transparent 50%);
+        animation: bg-shift 12s ease-in-out infinite alternate;
+      }
+
+      @keyframes bg-shift {
+        0%   { opacity: 0.7; transform: scale(1); }
+        100% { opacity: 1;   transform: scale(1.05); }
+      }
+
+      /* Floating orbs */
+      .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.3;
+        z-index: 0;
+        animation: orb-drift 20s ease-in-out infinite alternate;
+      }
+      .orb-1 { width: 400px; height: 400px; background: var(--accent); top: -10%; left: -5%; animation-duration: 18s; }
+      .orb-2 { width: 300px; height: 300px; background: #3b82f6; bottom: -8%; right: -5%; animation-duration: 22s; animation-delay: -5s; }
+      .orb-3 { width: 200px; height: 200px; background: #a78bfa; top: 50%; left: 60%; animation-duration: 16s; animation-delay: -8s; }
+
+      @keyframes orb-drift {
+        0%   { transform: translate(0, 0) scale(1); }
+        33%  { transform: translate(30px, -20px) scale(1.1); }
+        66%  { transform: translate(-20px, 30px) scale(0.95); }
+        100% { transform: translate(10px, -10px) scale(1.05); }
+      }
+
+      /* ───── Card ───── */
+      .card {
+        position: relative;
+        z-index: 1;
+        width: 100%;
         max-width: 420px;
-        margin: 8vh auto;
-        padding: 24px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        margin: 1rem;
+        padding: 40px 36px 36px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        backdrop-filter: blur(24px) saturate(1.4);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.02),
+          0 20px 60px -12px rgba(0, 0, 0, 0.5),
+          0 0 80px -20px var(--accent-glow);
+        animation: card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
       }
-      label {
+
+      @keyframes card-enter {
+        from { opacity: 0; transform: translateY(30px) scale(0.96); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      /* ───── Logo & Header ───── */
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .logo-icon {
+        width: 40px;
+        height: 40px;
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 0 8px var(--accent-glow));
+      }
+
+      .logo-text {
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .subtitle {
+        font-size: 0.9rem;
+        color: var(--text-dim);
+        margin-bottom: 28px;
+        animation: fade-in 0.7s 0.15s both;
+      }
+
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ───── Error Banner ───── */
+      .error-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        margin-bottom: 20px;
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.2);
+        border-radius: var(--radius);
+        color: var(--danger);
+        font-size: 0.85rem;
+        font-weight: 500;
+        animation: shake 0.4s ease;
+      }
+
+      .error-banner svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-6px); }
+        40% { transform: translateX(6px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+      }
+
+      /* ───── Form Fields ───── */
+      .field {
+        margin-bottom: 18px;
+        animation: fade-in 0.6s both;
+      }
+      .field:nth-child(1) { animation-delay: 0.2s; }
+      .field:nth-child(2) { animation-delay: 0.3s; }
+
+      .field label {
         display: block;
-        margin-bottom: 6px;
+        font-size: 0.8rem;
         font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
-      input {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 12px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
+
+      .input-wrap {
+        position: relative;
       }
-      button {
+
+      .input-wrap svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        stroke: var(--text-dim);
+        fill: none;
+        stroke-width: 1.5;
+        transition: stroke 0.2s;
+        pointer-events: none;
+      }
+
+      .field input {
         width: 100%;
-        padding: 10px;
-        background: #2563eb;
+        padding: 12px 14px 12px 44px;
+        font-family: var(--font);
+        font-size: 0.95rem;
+        color: var(--text);
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        border-radius: var(--radius);
+        outline: none;
+        transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+      }
+
+      .field input::placeholder {
+        color: rgba(136, 136, 164, 0.5);
+      }
+
+      .field input:focus {
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.07);
+        box-shadow: 0 0 0 3px var(--input-focus), 0 0 20px -4px var(--accent-glow);
+      }
+
+      .field input:focus ~ svg,
+      .field input:focus + svg {
+        stroke: var(--accent);
+      }
+
+      /* ───── Button ───── */
+      .btn-submit {
+        width: 100%;
+        padding: 13px 20px;
+        margin-top: 6px;
+        font-family: var(--font);
+        font-size: 0.95rem;
+        font-weight: 600;
         color: #fff;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
         border: none;
-        border-radius: 6px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        animation: fade-in 0.6s 0.4s both;
+      }
+
+      .btn-submit::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+        transform: translateX(-100%);
+        transition: transform 0.5s;
+      }
+
+      .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px -6px var(--accent-glow);
+      }
+
+      .btn-submit:hover::before {
+        transform: translateX(100%);
+      }
+
+      .btn-submit:active {
+        transform: translateY(0) scale(0.98);
+      }
+
+      /* ───── Footer ───── */
+      .footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        opacity: 0.5;
+        animation: fade-in 0.6s 0.5s both;
+      }
+
+      /* ───── Responsive ───── */
+      @media (max-width: 480px) {
+        .card { padding: 28px 20px 24px; border-radius: 16px; }
+        .logo-text { font-size: 1.15rem; }
       }
     </style>
+
+    <!-- ═══ Plugin CSS (loaded from ~/.gatekeeper/<name>/<name>.css) ═══ -->
+    {{range .Plugins}}{{if .CSS}}<style>{{.CSS}}</style>{{end}}
+    {{end}}
   </head>
   <body>
-    <div class="wrap">
-      <h2>Sign in</h2>
-      <form method="post" action="/login">
-        <label for="username">Username</label>
-        <input id="username" name="username" required />
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" required />
-        <button type="submit">Sign in</button>
+    <!-- Background elements -->
+    <div class="bg-gradient" aria-hidden="true"></div>
+    <div class="orb orb-1" aria-hidden="true"></div>
+    <div class="orb orb-2" aria-hidden="true"></div>
+    <div class="orb orb-3" aria-hidden="true"></div>
+
+    <!-- Login Card -->
+    <div class="card">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" />
+          <polyline points="9 12 11 14 15 10" />
+        </svg>
+        <span class="logo-text">Gatekeeper</span>
+      </div>
+      <p class="subtitle">Sign in to continue</p>
+
+      {{if .Error}}
+      <div class="error-banner" role="alert">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>{{.Error}}</span>
+      </div>
+      {{end}}
+
+      <form method="post" action="/login" id="login-form">
+        <div class="field">
+          <label for="username">Username</label>
+          <div class="input-wrap">
+            <input id="username" name="username" type="text" placeholder="Enter your username" autocomplete="username" required autofocus />
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required />
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit" id="btn-login">Sign in</button>
       </form>
+
+      <div class="footer">Protected by Gatekeeper</div>
     </div>
+
+    <!-- ═══ Plugin JS (loaded from ~/.gatekeeper/<name>/<name>.js) ═══ -->
+    {{range .Plugins}}{{if .JS}}<script>{{.JS}}</script>{{end}}
+    {{end}}
   </body>
 </html>

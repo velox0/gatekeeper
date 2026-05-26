@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"embed"
 	"html/template"
+	"log"
 	"net/http"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/velox0/gatekeeper/internal/config"
+	"github.com/velox0/gatekeeper/internal/plugins"
 	"github.com/velox0/gatekeeper/internal/session"
 )
 
@@ -20,6 +22,12 @@ type Handler struct {
 	cfg   *config.Config
 	store *session.InMemoryStore
 	tmpl  *template.Template
+}
+
+// loginData is the data passed to the login page template.
+type loginData struct {
+	Error   string
+	Plugins []plugins.LoadedPlugin
 }
 
 func NewHandler(cfg *config.Config, store *session.InMemoryStore) (*Handler, error) {
@@ -33,8 +41,19 @@ func NewHandler(cfg *config.Config, store *session.InMemoryStore) (*Handler, err
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		loaded, err := plugins.LoadEnabled(h.cfg.GetPlugins())
+		if err != nil {
+			log.Printf("warning: failed to load plugin assets: %v", err)
+		}
+		data := loginData{
+			Plugins: loaded,
+		}
+		if msg := r.URL.Query().Get("error"); msg != "" {
+			data.Error = msg
+		}
 		var buf bytes.Buffer
-		if err := h.tmpl.Execute(&buf, nil); err != nil {
+		if err := h.tmpl.Execute(&buf, data); err != nil {
+			log.Printf("template error: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -52,19 +71,20 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.PostForm.Get("password")
 
 		// find user
+		users := h.cfg.GetUsers()
 		var found *config.UserConfig
-		for i := range h.cfg.Users {
-			if h.cfg.Users[i].Username == username {
-				found = &h.cfg.Users[i]
+		for i := range users {
+			if users[i].Username == username {
+				found = &users[i]
 				break
 			}
 		}
 		if found == nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(found.PasswordHash), []byte(password)); err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
 			return
 		}
 
