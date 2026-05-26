@@ -33,13 +33,15 @@ type VirtualHost struct {
 
 // Listener binds a listen address to a set of virtual hosts keyed by server_name.
 type Listener struct {
-	Addr   string
-	Hosts  map[string]*VirtualHost // server_name → vhost
-	Server *http.Server
+	Addr        string
+	Hosts       map[string]*VirtualHost // server_name → vhost
+	DefaultHost *VirtualHost            // fallback server block
+	Server      *http.Server
 }
 
 // ServeHTTP dispatches incoming requests to the matching virtual host
-// based on the Host header. Unknown hosts receive a 404.
+// based on the Host header. If no exact match is found, it falls back
+// to the DefaultHost (if configured), otherwise returning a 404.
 func (l *Listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host := r.Host
 	// Strip port from Host header
@@ -50,8 +52,12 @@ func (l *Listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	vhost, ok := l.Hosts[host]
 	if !ok {
-		http.Error(w, "no server configured for this host", http.StatusNotFound)
-		return
+		if l.DefaultHost != nil {
+			vhost = l.DefaultHost
+		} else {
+			http.Error(w, "no server configured for this host", http.StatusNotFound)
+			return
+		}
 	}
 	vhost.Mux.ServeHTTP(w, r)
 }
@@ -93,9 +99,14 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 	for _, srvCfg := range lnCfg.Servers {
 		rc := cfg.ResolveServer(lnCfg, srvCfg)
 
+		displayName := rc.ServerName
+		if displayName == "" {
+			displayName = "<default>"
+		}
+
 		upstreamURL, err := url.Parse(rc.Upstream.Target)
 		if err != nil {
-			return nil, fmt.Errorf("server %s: invalid upstream: %w", rc.ServerName, err)
+			return nil, fmt.Errorf("server %s: invalid upstream: %w", displayName, err)
 		}
 
 		rev := newReverseProxy(upstreamURL)
@@ -105,7 +116,7 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 
 		authHandler, err := auth.NewHandler(&rc, sessStore)
 		if err != nil {
-			return nil, fmt.Errorf("server %s: auth init: %w", rc.ServerName, err)
+			return nil, fmt.Errorf("server %s: auth init: %w", displayName, err)
 		}
 
 		mux.HandleFunc("/login", authHandler.LoginHandler)
@@ -129,7 +140,16 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 		}
 
 		name := strings.ToLower(srvCfg.ServerName)
-		ln.Hosts[name] = vhost
+		if name != "" {
+			ln.Hosts[name] = vhost
+		} else {
+			ln.Hosts[""] = vhost
+		}
+
+		// If explicitly empty/omitted server_name, it becomes the default fallback
+		if name == "" {
+			ln.DefaultHost = vhost
+		}
 	}
 
 	ln.Server = &http.Server{
@@ -183,7 +203,11 @@ func (gw *Gateway) Start() error {
 		go func(l *Listener) {
 			var serverNames []string
 			for name := range l.Hosts {
-				serverNames = append(serverNames, name)
+				if name == "" {
+					serverNames = append(serverNames, "<default>")
+				} else {
+					serverNames = append(serverNames, name)
+				}
 			}
 			log.Printf("listening on %s (vhosts: %s)", l.Addr, strings.Join(serverNames, ", "))
 			if err := l.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -202,14 +226,30 @@ func (gw *Gateway) Start() error {
 	}
 }
 
-// Shutdown gracefully shuts down all listeners.
+// Shutdown gracefully shuts down all listeners concurrently.
 func (gw *Gateway) Shutdown(ctx context.Context) error {
 	gw.mu.Lock()
 	defer gw.mu.Unlock()
 
-	var firstErr error
+	var wg sync.WaitGroup
+	errs := make(chan error, len(gw.listeners))
+
 	for _, ln := range gw.listeners {
-		if err := ln.Server.Shutdown(ctx); err != nil && firstErr == nil {
+		wg.Add(1)
+		go func(s *http.Server) {
+			defer wg.Done()
+			if err := s.Shutdown(ctx); err != nil {
+				errs <- err
+			}
+		}(ln.Server)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	var firstErr error
+	for err := range errs {
+		if firstErr == nil {
 			firstErr = err
 		}
 	}

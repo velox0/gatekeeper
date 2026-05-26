@@ -164,3 +164,50 @@ func TestMultipleListenersCreated(t *testing.T) {
 		t.Error("listener[1] should have vhost b.local")
 	}
 }
+
+func TestListenerRoutesToDefaultHost(t *testing.T) {
+	cfg := &config.Config{
+		Auth: config.AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
+		Listeners: []config.ListenerConfig{
+			{
+				Listen: ":0",
+				Servers: []config.ServerBlock{
+					{
+						ServerName: "app.local",
+						Upstream:   config.UpstreamConfig{Target: "http://localhost:3000"},
+					},
+					{
+						ServerName: "", // catch-all / default host
+						Upstream:   config.UpstreamConfig{Target: "http://localhost:4000"},
+					},
+				},
+			},
+		},
+	}
+
+	gw, err := NewGateway(cfg)
+	if err != nil {
+		t.Fatalf("NewGateway error: %v", err)
+	}
+
+	ln := gw.Listeners()[0]
+
+	// Request with exact match should route to app.local
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	req.Host = "app.local"
+	rec := httptest.NewRecorder()
+	ln.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("app.local: status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	// Request with unmatched Host should route to the default catch-all
+	req2 := httptest.NewRequest(http.MethodGet, "/login", nil)
+	req2.Host = "unmatched.local"
+	rec2 := httptest.NewRecorder()
+	ln.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Errorf("unmatched.local: status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+}
+

@@ -100,11 +100,19 @@ func AddUser(cfgPath, username, password string) error {
 		// Check for duplicate in this server block
 		for _, u := range srv.Users {
 			if u.Username == username {
-				return fmt.Errorf("user %q already exists in server block %s → %s", username, ref.Listen, ref.ServerName)
+				srvName := ref.ServerName
+				if srvName == "" {
+					srvName = "<default>"
+				}
+				return fmt.Errorf("user %q already exists in server block %s → %s", username, ref.Listen, srvName)
 			}
 		}
 		srv.Users = append(srv.Users, newUser)
-		fmt.Printf("user %q added to %s → %s\n", username, ref.Listen, ref.ServerName)
+		srvName := ref.ServerName
+		if srvName == "" {
+			srvName = "<default>"
+		}
+		fmt.Printf("user %q added to %s → %s\n", username, ref.Listen, srvName)
 	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
@@ -152,11 +160,15 @@ func RemoveUser(cfgPath, username string) error {
 			}
 			filtered = append(filtered, u)
 		}
+		srvName := ref.ServerName
+		if srvName == "" {
+			srvName = "<default>"
+		}
 		if !found {
-			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, ref.ServerName)
+			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, srvName)
 		}
 		srv.Users = filtered
-		fmt.Printf("user %q removed from %s → %s\n", username, ref.Listen, ref.ServerName)
+		fmt.Printf("user %q removed from %s → %s\n", username, ref.Listen, srvName)
 	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
@@ -206,10 +218,14 @@ func UpdateUser(cfgPath, username, newPassword string) error {
 				break
 			}
 		}
-		if !found {
-			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, ref.ServerName)
+		srvName := ref.ServerName
+		if srvName == "" {
+			srvName = "<default>"
 		}
-		fmt.Printf("user %q updated in %s → %s\n", username, ref.Listen, ref.ServerName)
+		if !found {
+			return fmt.Errorf("user %q not found in %s → %s", username, ref.Listen, srvName)
+		}
+		fmt.Printf("user %q updated in %s → %s\n", username, ref.Listen, srvName)
 	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {

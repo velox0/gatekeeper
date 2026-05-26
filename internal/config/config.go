@@ -253,16 +253,25 @@ func validateConfig(cfg *Config) error {
 		}
 
 		serverNames := make(map[string]bool)
+		hasEmptyServerName := false
 		for si, srv := range ln.Servers {
 			if srv.ServerName == "" {
-				return fmt.Errorf("listener[%d] (%s) server[%d]: server_name is required", li, ln.Listen, si)
+				if hasEmptyServerName {
+					return fmt.Errorf("listener[%d] (%s): multiple default/catch-all server blocks (empty server_name) are not allowed", li, ln.Listen)
+				}
+				hasEmptyServerName = true
+			} else {
+				if serverNames[srv.ServerName] {
+					return fmt.Errorf("listener[%d] (%s): duplicate server_name %q", li, ln.Listen, srv.ServerName)
+				}
+				serverNames[srv.ServerName] = true
 			}
-			if serverNames[srv.ServerName] {
-				return fmt.Errorf("listener[%d] (%s): duplicate server_name %q", li, ln.Listen, srv.ServerName)
-			}
-			serverNames[srv.ServerName] = true
 
-			if err := validateUpstream(srv.Upstream, fmt.Sprintf("listener[%d] (%s) server[%d] (%s)", li, ln.Listen, si, srv.ServerName)); err != nil {
+			displayName := srv.ServerName
+			if displayName == "" {
+				displayName = "<default>"
+			}
+			if err := validateUpstream(srv.Upstream, fmt.Sprintf("listener[%d] (%s) server[%d] (%s)", li, ln.Listen, si, displayName)); err != nil {
 				return err
 			}
 		}

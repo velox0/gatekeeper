@@ -55,34 +55,29 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-		for sig := range sigCh {
-			switch sig {
-			case syscall.SIGHUP:
-				log.Println("received SIGHUP, reloading configuration...")
-				if err := cfg.Reload(*cfgPath); err != nil {
-					log.Printf("config reload failed: %v", err)
-				}
-			case syscall.SIGINT, syscall.SIGTERM:
-				log.Printf("received %s, shutting down gracefully...", sig)
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				if err := gw.Shutdown(ctx); err != nil {
-					log.Printf("graceful shutdown error: %v", err)
-				}
-				return
-			}
-		}
-	}()
-
 	fmt.Printf("starting %s (pid %d)\n", cfg.DisplayName(), os.Getpid())
 	if err := gw.Start(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 
 	// Block until a signal stops us.
-	// gw.Start() launches goroutines; we need to wait for shutdown.
-	select {}
+	for sig := range sigCh {
+		switch sig {
+		case syscall.SIGHUP:
+			log.Println("received SIGHUP, reloading configuration...")
+			if err := cfg.Reload(*cfgPath); err != nil {
+				log.Printf("config reload failed: %v", err)
+			}
+		case syscall.SIGINT, syscall.SIGTERM:
+			log.Printf("received %s, shutting down gracefully...", sig)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := gw.Shutdown(ctx); err != nil {
+				log.Printf("graceful shutdown error: %v", err)
+			}
+			return
+		}
+	}
 }
 
 // requireRoot exits with an error if the process is not running as root.

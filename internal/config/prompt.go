@@ -44,7 +44,11 @@ func PromptServerBlockSelection(refs []ServerBlockRef, includeGlobal bool) (glob
 		fmt.Printf("  [0] global (applies to all server blocks)\n")
 	}
 	for i, ref := range refs {
-		fmt.Printf("  [%d] %s → %s\n", i+1, ref.Listen, ref.ServerName)
+		name := ref.ServerName
+		if name == "" {
+			name = "<default>"
+		}
+		fmt.Printf("  [%d] %s → %s\n", i+1, ref.Listen, name)
 	}
 	fmt.Println()
 	fmt.Print("Select scope(s) (e.g. 0, 1, 1-3, 1,3): ")

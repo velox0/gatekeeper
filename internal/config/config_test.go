@@ -305,3 +305,38 @@ listeners:
 		t.Fatalf("DisplayName() = %q, want Gatekeeper", cfg.DisplayName())
 	}
 }
+
+func TestLoadConfigAllowsOptionalServerName(t *testing.T) {
+	cfg, err := LoadConfig(writeConfig(t, `
+listeners:
+  - listen: ":8080"
+    servers:
+      - upstream:
+          target: "http://localhost:3000"
+`))
+	if err != nil {
+		t.Fatalf("expected LoadConfig to succeed with empty/omitted server_name: %v", err)
+	}
+	if cfg.Listeners[0].Servers[0].ServerName != "" {
+		t.Fatalf("expected server_name to be empty, got %q", cfg.Listeners[0].Servers[0].ServerName)
+	}
+}
+
+func TestLoadConfigRejectsMultipleOptionalServerNames(t *testing.T) {
+	_, err := LoadConfig(writeConfig(t, `
+listeners:
+  - listen: ":8080"
+    servers:
+      - upstream:
+          target: "http://localhost:3000"
+      - upstream:
+          target: "http://localhost:4000"
+`))
+	if err == nil {
+		t.Fatal("expected LoadConfig to reject multiple server blocks without server_name")
+	}
+	if !strings.Contains(err.Error(), "multiple default/catch-all server blocks") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+

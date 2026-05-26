@@ -109,7 +109,11 @@ func listPlugins(cfgPath string) {
 			if len(srv.Plugins) == 0 {
 				continue
 			}
-			fmt.Printf("\n=== %s → %s (overrides) ===\n", ln.Listen, srv.ServerName)
+			displayName := srv.ServerName
+			if displayName == "" {
+				displayName = "<default>"
+			}
+			fmt.Printf("\n=== %s → %s (overrides) ===\n", ln.Listen, displayName)
 			fmt.Printf("%-12s %-8s\n", "PLUGIN", "STATUS")
 			for _, p := range plugins {
 				if v, ok := srv.Plugins[p.Name]; ok {
@@ -165,7 +169,11 @@ func setPlugin(cfgPath, pidPath, name string, enabled bool) {
 		if enabled {
 			verb = "enabled"
 		}
-		fmt.Printf("plugin %q %s in %s → %s\n", name, verb, ref.Listen, ref.ServerName)
+		srvName := ref.ServerName
+		if srvName == "" {
+			srvName = "<default>"
+		}
+		fmt.Printf("plugin %q %s in %s → %s\n", name, verb, ref.Listen, srvName)
 	}
 
 	if err := SaveConfig(cfg, cfgPath); err != nil {
