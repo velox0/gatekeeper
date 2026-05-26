@@ -138,6 +138,19 @@ Manage visual login page effects.
   ./gatekeeper plugin disable <name>
   ```
 
+### Configuration Management
+
+Manage configuration initialization and background service setup instructions tailored to your machine's OS.
+
+- **Initialize Default Config**: Generates a default configuration template at `~/.gatekeeper/config.yml` (if it does not exist already):
+  ```bash
+  ./gatekeeper config init
+  ```
+- **Generate Background Service Config**: Prints configuration files and commands to register Gatekeeper as a system daemon (`systemd` service for Linux, `launchd` plist for macOS):
+  ```bash
+  ./gatekeeper config service
+  ```
+
 ### Scope Selection Prompt
 
 When executing management commands, Gatekeeper will list all configured server blocks and prompt you to specify the target scope(s):

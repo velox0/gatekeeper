@@ -15,7 +15,7 @@ import (
 	"github.com/velox0/gatekeeper/internal/server"
 )
 
-const Version = "0.1.1"
+const Version = "0.1.2"
 
 func main() {
 	cfgPath := flag.String("config", "config.example.yml", "path to config yaml")
@@ -37,6 +37,9 @@ func main() {
 			return
 		case "plugin", "plugins":
 			config.HandlePluginCommand(*cfgPath, *pidPath, args[1:])
+			return
+		case "config":
+			config.HandleConfigCommand(args[1:])
 			return
 		default:
 			fmt.Fprintf(os.Stderr, "unknown command: %s\nRun 'gatekeeper help' for usage.\n", args[0])
@@ -103,10 +106,11 @@ func printGeneralHelp() {
 	fmt.Printf("Gatekeeper v%s - lightweight reverse proxy & session authentication gateway\n", Version)
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  gatekeeper [flags]                Start the gateway daemon")
-	fmt.Println("  gatekeeper [flags] user <command>  Manage gateway users")
-	fmt.Println("  gatekeeper [flags] plugin <command> Manage visual login plugins")
-	fmt.Println("  gatekeeper help                    Show this help message")
+	fmt.Println("  gatekeeper [flags]                    Start the gateway daemon")
+	fmt.Println("  gatekeeper [flags] user <command>     Manage gateway users")
+	fmt.Println("  gatekeeper [flags] plugin <command>   Manage visual login plugins")
+	fmt.Println("  gatekeeper [flags] config <command>   Manage configuration & service setup")
+	fmt.Println("  gatekeeper help                       Show this help message")
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  -config string   path to config yaml (default \"config.example.yml\")")
@@ -115,4 +119,5 @@ func printGeneralHelp() {
 	fmt.Println("Commands:")
 	fmt.Println("  user    Run 'gatekeeper user help' for user management commands")
 	fmt.Println("  plugin  Run 'gatekeeper plugin help' for plugin management commands")
+	fmt.Println("  config  Run 'gatekeeper config help' for configuration & service setup commands")
 }
