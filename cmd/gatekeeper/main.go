@@ -22,16 +22,23 @@ func main() {
 
 	args := flag.Args()
 
-	// --- Management mode ---
-	if len(args) > 0 && args[0] == "users" {
-		requireRoot()
-		config.HandleUsersCommand(*cfgPath, *pidPath, args[1:])
-		return
-	}
-
-	if len(args) > 0 && args[0] == "plugin" {
-		config.HandlePluginsCommand(*cfgPath, *pidPath, args[1:])
-		return
+	// --- Management & Help modes ---
+	if len(args) > 0 {
+		switch args[0] {
+		case "help":
+			printGeneralHelp()
+			return
+		case "user", "users":
+			requireRoot()
+			config.HandleUserCommand(*cfgPath, *pidPath, args[1:])
+			return
+		case "plugin", "plugins":
+			config.HandlePluginCommand(*cfgPath, *pidPath, args[1:])
+			return
+		default:
+			fmt.Fprintf(os.Stderr, "unknown command: %s\nRun 'gatekeeper help' for usage.\n", args[0])
+			os.Exit(1)
+		}
 	}
 
 	// --- Daemon mode ---
@@ -86,4 +93,23 @@ func requireRoot() {
 		fmt.Fprintln(os.Stderr, "error: this command requires root privileges. Please run with sudo.")
 		os.Exit(1)
 	}
+}
+
+// printGeneralHelp prints usage and command options to the terminal.
+func printGeneralHelp() {
+	fmt.Println("Gatekeeper - lightweight reverse proxy & session authentication gateway")
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  gatekeeper [flags]                Start the gateway daemon")
+	fmt.Println("  gatekeeper [flags] user <command>  Manage gateway users")
+	fmt.Println("  gatekeeper [flags] plugin <command> Manage visual login plugins")
+	fmt.Println("  gatekeeper help                    Show this help message")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  -config string   path to config yaml (default \"config.example.yml\")")
+	fmt.Println("  -pid string      path to PID file (default \"/var/run/gatekeeper.pid\")")
+	fmt.Println()
+	fmt.Println("Commands:")
+	fmt.Println("  user    Run 'gatekeeper user help' for user management commands")
+	fmt.Println("  plugin  Run 'gatekeeper plugin help' for plugin management commands")
 }

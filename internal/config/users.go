@@ -11,16 +11,16 @@ import (
 	"github.com/velox0/gatekeeper/internal/daemon"
 )
 
-// HandleUsersCommand parses and dispatches user management subcommands.
+// HandleUserCommand parses and dispatches user management subcommands.
 // Usage:
 //
-//	gatekeeper users add <username>
-//	gatekeeper users remove <username>
-//	gatekeeper users update <username>
-func HandleUsersCommand(cfgPath, pidPath string, args []string) {
-	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: gatekeeper users <add|remove|update> ...")
-		os.Exit(1)
+//	gatekeeper user add <username>
+//	gatekeeper user remove <username>
+//	gatekeeper user update <username>
+func HandleUserCommand(cfgPath, pidPath string, args []string) {
+	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
+		printUserHelp()
+		os.Exit(0)
 	}
 
 	subcmd := args[0]
@@ -30,7 +30,7 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 	switch subcmd {
 	case "add":
 		if len(rest) != 1 {
-			fmt.Fprintln(os.Stderr, "usage: gatekeeper users add <username>")
+			fmt.Fprintln(os.Stderr, "usage: gatekeeper user add <username>")
 			os.Exit(1)
 		}
 		password, pErr := readPasswordInteractively()
@@ -41,13 +41,13 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 		err = AddUser(cfgPath, rest[0], password)
 	case "remove":
 		if len(rest) != 1 {
-			fmt.Fprintln(os.Stderr, "usage: gatekeeper users remove <username>")
+			fmt.Fprintln(os.Stderr, "usage: gatekeeper user remove <username>")
 			os.Exit(1)
 		}
 		err = RemoveUser(cfgPath, rest[0])
 	case "update":
 		if len(rest) != 1 {
-			fmt.Fprintln(os.Stderr, "usage: gatekeeper users update <username>")
+			fmt.Fprintln(os.Stderr, "usage: gatekeeper user update <username>")
 			os.Exit(1)
 		}
 		password, pErr := readPasswordInteractively()
@@ -57,7 +57,7 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 		}
 		err = UpdateUser(cfgPath, rest[0], password)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown users subcommand: %s\n", subcmd)
+		fmt.Fprintf(os.Stderr, "unknown user subcommand: %s\nRun 'gatekeeper user help' for usage.\n", subcmd)
 		os.Exit(1)
 	}
 
@@ -270,5 +270,16 @@ func readPasswordInteractively() (string, error) {
 	}
 
 	return string(p1), nil
+}
+
+// printUserHelp displays help details for user commands.
+func printUserHelp() {
+	fmt.Println("Gatekeeper - User Management")
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  gatekeeper user add <username>     Add a new user (prompts securely for password)")
+	fmt.Println("  gatekeeper user remove <username>  Remove an existing user")
+	fmt.Println("  gatekeeper user update <username>  Update a user's password")
+	fmt.Println("  gatekeeper user help               Show this help message")
 }
 

@@ -47,16 +47,16 @@ func IsKnownPlugin(name string) bool {
 	return false
 }
 
-// HandlePluginsCommand parses and dispatches plugin management subcommands.
+// HandlePluginCommand parses and dispatches plugin management subcommands.
 // Usage:
 //
 //	gatekeeper plugin list
 //	gatekeeper plugin enable  <name>
 //	gatekeeper plugin disable <name>
-func HandlePluginsCommand(cfgPath, pidPath string, args []string) {
-	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: gatekeeper plugin <list|enable|disable> ...")
-		os.Exit(1)
+func HandlePluginCommand(cfgPath, pidPath string, args []string) {
+	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
+		printPluginHelp()
+		os.Exit(0)
 	}
 
 	subcmd := args[0]
@@ -78,7 +78,7 @@ func HandlePluginsCommand(cfgPath, pidPath string, args []string) {
 		}
 		setPlugin(cfgPath, pidPath, rest[0], false)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown plugin subcommand: %s\n", subcmd)
+		fmt.Fprintf(os.Stderr, "unknown plugin subcommand: %s\nRun 'gatekeeper plugin help' for usage.\n", subcmd)
 		os.Exit(1)
 	}
 }
@@ -188,4 +188,15 @@ func setPlugin(cfgPath, pidPath, name string, enabled bool) {
 	} else {
 		fmt.Println("config saved and daemon signaled to reload")
 	}
+}
+
+// printPluginHelp displays help details for plugin commands.
+func printPluginHelp() {
+	fmt.Println("Gatekeeper - Visual Login Plugins")
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  gatekeeper plugin list            List all visual login plugins and their statuses")
+	fmt.Println("  gatekeeper plugin enable <name>   Enable a visual plugin for specific scopes")
+	fmt.Println("  gatekeeper plugin disable <name>  Disable a visual plugin for specific scopes")
+	fmt.Println("  gatekeeper plugin help            Show this help message")
 }

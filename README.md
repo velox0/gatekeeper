@@ -98,7 +98,7 @@ listeners:
 
 ## Command Line Interface (CLI)
 
-Gatekeeper includes interactive management tools to adjust users and login page plugins without editing configuration files manually.
+Gatekeeper includes interactive management tools to adjust users and login page plugins without editing configuration files manually. You can get command-line help by appending `help` to any command (e.g., `./gatekeeper help`, `./gatekeeper user help`, or `./gatekeeper plugin help`).
 
 ### User Management
 
@@ -106,15 +106,15 @@ User commands modify the config file, require root privileges, and prompt secure
 
 - **Add User**:
   ```bash
-  sudo ./gatekeeper users add <username>
+  sudo ./gatekeeper user add <username>
   ```
 - **Update Password**:
   ```bash
-  sudo ./gatekeeper users update <username>
+  sudo ./gatekeeper user update <username>
   ```
 - **Remove User**:
   ```bash
-  sudo ./gatekeeper users remove <username>
+  sudo ./gatekeeper user remove <username>
   ```
 
 ### Plugin Management
