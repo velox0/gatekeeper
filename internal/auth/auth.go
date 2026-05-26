@@ -1,0 +1,118 @@
+package auth
+
+import (
+	"bytes"
+	"embed"
+	"html/template"
+	"net/http"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/velox0/gatekeeper/internal/config"
+	"github.com/velox0/gatekeeper/internal/session"
+)
+
+//go:embed login.html
+var loginPage embed.FS
+
+type Handler struct {
+	cfg   *config.Config
+	store *session.InMemoryStore
+	tmpl  *template.Template
+}
+
+func NewHandler(cfg *config.Config, store *session.InMemoryStore) (*Handler, error) {
+	t, err := template.ParseFS(loginPage, "login.html")
+	if err != nil {
+		return nil, err
+	}
+	return &Handler{cfg: cfg, store: store, tmpl: t}, nil
+}
+
+func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		var buf bytes.Buffer
+		if err := h.tmpl.Execute(&buf, nil); err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(buf.Bytes()); err != nil {
+			return
+		}
+		return
+	case http.MethodPost:
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		username := r.PostForm.Get("username")
+		password := r.PostForm.Get("password")
+
+		// find user
+		var found *config.UserConfig
+		for i := range h.cfg.Users {
+			if h.cfg.Users[i].Username == username {
+				found = &h.cfg.Users[i]
+				break
+			}
+		}
+		if found == nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(found.PasswordHash), []byte(password)); err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		sess, err := h.store.Create(username, h.cfg.Auth.SessionTTL)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		cookie := &http.Cookie{
+			Name:     h.cfg.Auth.CookieName,
+			Value:    sess.ID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   h.cfg.Security.SecureCookies,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  sess.ExpiresAt,
+		}
+		http.SetCookie(w, cookie)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	default:
+		w.Header().Set("Allow", http.MethodGet+", "+http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+}
+
+func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	c, err := r.Cookie(h.cfg.Auth.CookieName)
+	if err == nil {
+		h.store.Delete(c.Value)
+		// clear cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     h.cfg.Auth.CookieName,
+			Value:    "",
+			Path:     "/",
+			Expires:  time.Unix(0, 0),
+			MaxAge:   -1,
+			HttpOnly: true,
+			Secure:   h.cfg.Security.SecureCookies,
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

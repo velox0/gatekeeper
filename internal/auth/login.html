@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gatekeeper Login</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          Segoe UI,
+          Roboto,
+          Arial;
+        background: #f7fafc;
+        color: #111;
+      }
+      .wrap {
+        max-width: 420px;
+        margin: 8vh auto;
+        padding: 24px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      }
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2>Sign in</h2>
+      <form method="post" action="/login">
+        <label for="username">Username</label>
+        <input id="username" name="username" required />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required />
+        <button type="submit">Sign in</button>
+      </form>
+    </div>
+  </body>
+</html>
