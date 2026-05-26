@@ -75,7 +75,7 @@ func main() {
 		}
 	}()
 
-	fmt.Printf("starting gatekeeper (pid %d)\n", os.Getpid())
+	fmt.Printf("starting %s (pid %d)\n", cfg.DisplayName(), os.Getpid())
 	if err := gw.Start(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}

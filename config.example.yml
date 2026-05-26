@@ -1,25 +1,25 @@
 # ─── Global scope (inherited by all listeners/servers unless overridden) ───
+app_name: Gatekeeper
 auth:
-  cookie_name: gatekeeper_session
-  session_ttl: 24h0m0s
+    cookie_name: gatekeeper_session
+    session_ttl: 24h0m0s
 security:
-  secure_cookies: false
+    secure_cookies: false
 users:
-  - username: test
-    password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
+    - username: test
+      password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
 plugins:
-  aurora: false
-  hearts: true
-  matrix: false
-
+    aurora: false
+    hearts: true
+    matrix: false
 # ─── Listeners ───
 listeners:
-  - listen: ":8080"
-    servers:
-      - server_name: app.local
-        upstream:
-          target: http://localhost:3000
-        routes:
-          - path: /
-            upstream: http://localhost:3000
-            auth: true
+    - listen: :8080
+      servers:
+        - server_name: app.local
+          upstream:
+            target: http://localhost:3000
+          routes:
+            - path: /
+              upstream: http://localhost:3000
+              auth: true

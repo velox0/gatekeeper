@@ -11,6 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const defaultAppName = "Gatekeeper"
+
 // AuthConfig controls session cookie settings.
 type AuthConfig struct {
 	CookieName string        `yaml:"cookie_name"`
@@ -60,12 +62,23 @@ type ListenerConfig struct {
 // Config is the top-level configuration.
 // Global-scope values are inherited by every server block unless overridden.
 type Config struct {
-	mu        sync.RWMutex    `yaml:"-"`
-	Auth      AuthConfig      `yaml:"auth"`
-	Security  SecurityConfig  `yaml:"security"`
-	Users     []UserConfig    `yaml:"users,omitempty"`
-	Plugins   map[string]bool `yaml:"plugins,omitempty"`
+	mu        sync.RWMutex     `yaml:"-"`
+	AppName   string           `yaml:"app_name,omitempty"`
+	Auth      AuthConfig       `yaml:"auth"`
+	Security  SecurityConfig   `yaml:"security"`
+	Users     []UserConfig     `yaml:"users,omitempty"`
+	Plugins   map[string]bool  `yaml:"plugins,omitempty"`
 	Listeners []ListenerConfig `yaml:"listeners"`
+}
+
+// DisplayName returns AppName if set, or the default "Gatekeeper".
+func (c *Config) DisplayName() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.AppName != "" {
+		return c.AppName
+	}
+	return defaultAppName
 }
 
 // GetUsers returns a copy of the global user list under a read lock.
@@ -100,6 +113,7 @@ func (c *Config) Reload(path string) error {
 		return fmt.Errorf("reload: failed to parse config: %w", err)
 	}
 	c.mu.Lock()
+	c.AppName = fresh.AppName
 	c.Users = fresh.Users
 	c.Plugins = fresh.Plugins
 	c.Listeners = fresh.Listeners
@@ -114,15 +128,84 @@ func (c *Config) ReloadUsers(path string) error {
 	return c.Reload(path)
 }
 
-// SaveConfig marshals the config and writes it to the given path.
+// SaveConfig marshals the config and writes it to the given path,
+// preserving any comments that exist in the original file.
 func SaveConfig(cfg *Config, path string) error {
 	cfg.mu.RLock()
 	defer cfg.mu.RUnlock()
-	b, err := yaml.Marshal(cfg)
+
+	// Marshal the current struct into a fresh yaml.Node.
+	newBytes, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	return os.WriteFile(path, b, 0644)
+
+	var newDoc yaml.Node
+	if err := yaml.Unmarshal(newBytes, &newDoc); err != nil {
+		return fmt.Errorf("failed to re-parse marshaled config: %w", err)
+	}
+
+	// Try to read the original file and transfer comments.
+	if origBytes, readErr := os.ReadFile(path); readErr == nil {
+		var oldDoc yaml.Node
+		if yaml.Unmarshal(origBytes, &oldDoc) == nil {
+			transferComments(&oldDoc, &newDoc)
+		}
+	}
+
+	out, err := yaml.Marshal(&newDoc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal final config: %w", err)
+	}
+	return os.WriteFile(path, out, 0644)
+}
+
+// transferComments recursively copies HeadComment, LineComment, and
+// FootComment from an old yaml.Node tree to a new one, matching by
+// key name for mappings and by position for sequences.
+func transferComments(old, new *yaml.Node) {
+	if old == nil || new == nil {
+		return
+	}
+
+	// Copy comments from old node to new node.
+	if old.HeadComment != "" {
+		new.HeadComment = old.HeadComment
+	}
+	if old.LineComment != "" {
+		new.LineComment = old.LineComment
+	}
+	if old.FootComment != "" {
+		new.FootComment = old.FootComment
+	}
+
+	switch {
+	case old.Kind == yaml.DocumentNode && new.Kind == yaml.DocumentNode:
+		// Document nodes wrap a single content node.
+		for i := 0; i < len(old.Content) && i < len(new.Content); i++ {
+			transferComments(old.Content[i], new.Content[i])
+		}
+
+	case old.Kind == yaml.MappingNode && new.Kind == yaml.MappingNode:
+		// Build index: key name → index of key node in old.Content.
+		oldKeys := make(map[string]int)
+		for i := 0; i < len(old.Content)-1; i += 2 {
+			oldKeys[old.Content[i].Value] = i
+		}
+		for i := 0; i < len(new.Content)-1; i += 2 {
+			key := new.Content[i].Value
+			if oi, ok := oldKeys[key]; ok {
+				transferComments(old.Content[oi], new.Content[i])     // key node
+				transferComments(old.Content[oi+1], new.Content[i+1]) // value node
+			}
+		}
+
+	case old.Kind == yaml.SequenceNode && new.Kind == yaml.SequenceNode:
+		// Transfer comments positionally.
+		for i := 0; i < len(old.Content) && i < len(new.Content); i++ {
+			transferComments(old.Content[i], new.Content[i])
+		}
+	}
 }
 
 // LoadConfig reads and validates the configuration from a YAML file.

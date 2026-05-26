@@ -212,3 +212,96 @@ listeners:
 		t.Fatalf("listener[1].server[0].server_name = %q, want admin.local", cfg.Listeners[1].Servers[0].ServerName)
 	}
 }
+
+func TestSaveConfigPreservesComments(t *testing.T) {
+	body := `# This is a top-level comment
+app_name: MyApp
+auth:
+  cookie_name: gk # inline comment
+  session_ttl: 1h
+# Security section
+security:
+  secure_cookies: false
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+`
+	path := writeConfig(t, body)
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig error: %v", err)
+	}
+
+	// Modify and save
+	if cfg.Plugins == nil {
+		cfg.Plugins = make(map[string]bool)
+	}
+	cfg.Plugins["hearts"] = true
+
+	if err := SaveConfig(cfg, path); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
+	}
+
+	// Read back and check comments survived
+	saved, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile error: %v", err)
+	}
+	content := string(saved)
+
+	if !strings.Contains(content, "# This is a top-level comment") {
+		t.Error("head comment was lost")
+	}
+	if !strings.Contains(content, "# inline comment") {
+		t.Error("inline comment was lost")
+	}
+	if !strings.Contains(content, "# Security section") {
+		t.Error("section comment was lost")
+	}
+}
+
+func TestLoadConfigParsesAppName(t *testing.T) {
+	cfg, err := LoadConfig(writeConfig(t, `
+app_name: MyPortal
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+`))
+	if err != nil {
+		t.Fatalf("LoadConfig error: %v", err)
+	}
+
+	if cfg.AppName != "MyPortal" {
+		t.Fatalf("AppName = %q, want MyPortal", cfg.AppName)
+	}
+	if cfg.DisplayName() != "MyPortal" {
+		t.Fatalf("DisplayName() = %q, want MyPortal", cfg.DisplayName())
+	}
+}
+
+func TestDisplayNameDefaultsToGatekeeper(t *testing.T) {
+	cfg, err := LoadConfig(writeConfig(t, `
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+`))
+	if err != nil {
+		t.Fatalf("LoadConfig error: %v", err)
+	}
+
+	if cfg.AppName != "" {
+		t.Fatalf("AppName = %q, want empty", cfg.AppName)
+	}
+	if cfg.DisplayName() != "Gatekeeper" {
+		t.Fatalf("DisplayName() = %q, want Gatekeeper", cfg.DisplayName())
+	}
+}

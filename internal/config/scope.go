@@ -3,6 +3,7 @@ package config
 // ResolvedConfig holds the fully-merged configuration for a single virtual host.
 // It is computed by combining the global Config with a specific ServerBlock.
 type ResolvedConfig struct {
+	AppName    string
 	ServerName string
 	Listen     string
 	Upstream   UpstreamConfig
@@ -25,7 +26,13 @@ func (c *Config) ResolveServer(ln ListenerConfig, srv ServerBlock) ResolvedConfi
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	appName := c.AppName
+	if appName == "" {
+		appName = defaultAppName
+	}
+
 	rc := ResolvedConfig{
+		AppName:    appName,
 		ServerName: srv.ServerName,
 		Listen:     ln.Listen,
 		Upstream:   srv.Upstream,

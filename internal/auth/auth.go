@@ -26,6 +26,7 @@ type Handler struct {
 
 // loginData is the data passed to the login page template.
 type loginData struct {
+	AppName string
 	Error   string
 	Plugins []plugins.LoadedPlugin
 }
@@ -46,6 +47,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("warning: failed to load plugin assets: %v", err)
 		}
 		data := loginData{
+			AppName: h.rc.AppName,
 			Plugins: loaded,
 		}
 		if msg := r.URL.Query().Get("error"); msg != "" {

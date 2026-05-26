@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="description" content="Gatekeeper — secure authentication gateway login" />
-    <title>Gatekeeper — Sign In</title>
+    <meta name="description" content="{{.AppName}} — secure authentication gateway login" />
+    <title>{{.AppName}} — Sign In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -318,7 +318,7 @@
           <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" />
           <polyline points="9 12 11 14 15 10" />
         </svg>
-        <span class="logo-text">Gatekeeper</span>
+        <span class="logo-text">{{.AppName}}</span>
       </div>
       <p class="subtitle">Sign in to continue</p>
 
@@ -347,7 +347,7 @@
         <button type="submit" class="btn-submit" id="btn-login">Sign in</button>
       </form>
 
-      <div class="footer">Protected by Gatekeeper</div>
+      <div class="footer">Protected by {{.AppName}}</div>
     </div>
 
     <!-- ═══ Plugin JS (loaded from ~/.gatekeeper/<name>/<name>.js) ═══ -->
