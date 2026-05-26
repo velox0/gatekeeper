@@ -29,7 +29,6 @@ Gatekeeper merges global settings with listener/server-level configurations usin
 | `auth`          | **Override**   | A server-level `auth` block overrides individual global fields (such as `cookie_name` and `session_ttl`).           |
 | `security`      | **Override**   | A server-level `security` block (e.g. `secure_cookies: true`) overrides the global settings.                        |
 | `upstream`      | **Required**   | Configured per server block. Defines the backend destination URL (e.g. `http://localhost:3000`).                    |
-| `routes`        | **Required**   | Configured per server block. Defines paths, sub-upstreams, and whether authentication is required.                  |
 
 ---
 
@@ -76,13 +75,6 @@ listeners:
     servers:
       - upstream:
           target: http://localhost:3000
-        routes:
-          - path: /
-            upstream: http://localhost:3000
-            auth: true # Auth required for main web application
-          - path: /public
-            upstream: http://localhost:3000
-            auth: false # Bypass auth for public assets
 
   # Example 2: Virtual Host routing (with server_name). Only matches matching Host header on port :9090.
   - listen: ":9090"
@@ -90,10 +82,6 @@ listeners:
       - server_name: app.local
         upstream:
           target: http://localhost:4000
-        routes:
-          - path: /
-            upstream: http://localhost:4000
-            auth: false # Public documentation site
         plugins:
           matrix: true # Overrides global: enable matrix, disable hearts
           hearts: false
@@ -101,10 +89,6 @@ listeners:
       - server_name: admin.local
         upstream:
           target: http://localhost:5000
-        routes:
-          - path: /
-            upstream: http://localhost:5000
-            auth: true
         users:
           - username: admin-user # Local user only allowed on admin.local
             password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
@@ -118,15 +102,15 @@ Gatekeeper includes interactive management tools to adjust users and login page 
 
 ### User Management
 
-User commands modify the config file and require root privileges.
+User commands modify the config file, require root privileges, and prompt securely for the password interactively (requiring 2-time confirmation).
 
 - **Add User**:
   ```bash
-  sudo ./gatekeeper users add <username> <password>
+  sudo ./gatekeeper users add <username>
   ```
 - **Update Password**:
   ```bash
-  sudo ./gatekeeper users update <username> <new_password>
+  sudo ./gatekeeper users update <username>
   ```
 - **Remove User**:
   ```bash

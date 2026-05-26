@@ -7,7 +7,6 @@ type ResolvedConfig struct {
 	ServerName string
 	Listen     string
 	Upstream   UpstreamConfig
-	Routes     []RouteConfig
 	Auth       AuthConfig
 	Security   SecurityConfig
 	Users      []UserConfig
@@ -36,7 +35,6 @@ func (c *Config) ResolveServer(ln ListenerConfig, srv ServerBlock) ResolvedConfi
 		ServerName: srv.ServerName,
 		Listen:     ln.Listen,
 		Upstream:   srv.Upstream,
-		Routes:     srv.Routes,
 	}
 
 	// --- Auth: start with global, override with server-level ---

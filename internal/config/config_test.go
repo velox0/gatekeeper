@@ -183,9 +183,6 @@ listeners:
       - server_name: app.local
         upstream:
           target: "http://localhost:3000"
-        routes:
-          - path: /
-            auth: true
       - server_name: docs.local
         upstream:
           target: "http://localhost:4000"

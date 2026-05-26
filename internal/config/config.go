@@ -35,18 +35,10 @@ type SecurityConfig struct {
 	SecureCookies bool `yaml:"secure_cookies"`
 }
 
-// RouteConfig defines a path and its proxy/auth behaviour.
-type RouteConfig struct {
-	Path     string `yaml:"path"`
-	Upstream string `yaml:"upstream"`
-	Auth     bool   `yaml:"auth"`
-}
-
 // ServerBlock defines a virtual host within a listener.
 type ServerBlock struct {
 	ServerName string          `yaml:"server_name"`
 	Upstream   UpstreamConfig  `yaml:"upstream"`
-	Routes     []RouteConfig   `yaml:"routes"`
 	Auth       *AuthConfig     `yaml:"auth,omitempty"`
 	Security   *SecurityConfig `yaml:"security,omitempty"`
 	Users      []UserConfig    `yaml:"users,omitempty"`

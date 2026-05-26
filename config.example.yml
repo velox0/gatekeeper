@@ -17,21 +17,19 @@ listeners:
     # Example 1: Catch-all listener (no server_name). Matches any host on port :8080.
     - listen: :8080
       servers:
-        - upstream:
+        - server_name: ""
+          upstream:
             target: http://localhost:3000
-          routes:
-            - path: /
-              upstream: http://localhost:3000
-              auth: true
-
+          routes: []
     # Example 2: Virtual Host routing (with server_name). Only matches matching Host header on port :9090.
     - listen: :9090
       servers:
         - server_name: app.local
           upstream:
-            target: http://localhost:5000
-          routes:
-            - path: /
-              upstream: http://localhost:5000
-              auth: true
-
+            target: http://localhost:3000
+          routes: []
+          users:
+            - username: test
+              password_hash: $2a$10$TVmAnyL4XOI0Y9Y5HaIm0.lu/5PbyyXm/bmEmgRUwv.dW/uBz1h0C
+            - username: tester
+              password_hash: $2a$10$FeKtuADezi6eeog60Uc6Z.SNcKPKlL0V0/jN1d6zAzD9ROSR8L1ZW

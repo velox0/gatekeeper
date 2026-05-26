@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/term"
 
 	"github.com/velox0/gatekeeper/internal/daemon"
 )
@@ -13,9 +14,9 @@ import (
 // HandleUsersCommand parses and dispatches user management subcommands.
 // Usage:
 //
-//	gatekeeper users add <username> <password>
+//	gatekeeper users add <username>
 //	gatekeeper users remove <username>
-//	gatekeeper users update <username> <new_password>
+//	gatekeeper users update <username>
 func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: gatekeeper users <add|remove|update> ...")
@@ -28,11 +29,16 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 	var err error
 	switch subcmd {
 	case "add":
-		if len(rest) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: gatekeeper users add <username> <password>")
+		if len(rest) != 1 {
+			fmt.Fprintln(os.Stderr, "usage: gatekeeper users add <username>")
 			os.Exit(1)
 		}
-		err = AddUser(cfgPath, rest[0], rest[1])
+		password, pErr := readPasswordInteractively()
+		if pErr != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", pErr)
+			os.Exit(1)
+		}
+		err = AddUser(cfgPath, rest[0], password)
 	case "remove":
 		if len(rest) != 1 {
 			fmt.Fprintln(os.Stderr, "usage: gatekeeper users remove <username>")
@@ -40,11 +46,16 @@ func HandleUsersCommand(cfgPath, pidPath string, args []string) {
 		}
 		err = RemoveUser(cfgPath, rest[0])
 	case "update":
-		if len(rest) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: gatekeeper users update <username> <new_password>")
+		if len(rest) != 1 {
+			fmt.Fprintln(os.Stderr, "usage: gatekeeper users update <username>")
 			os.Exit(1)
 		}
-		err = UpdateUser(cfgPath, rest[0], rest[1])
+		password, pErr := readPasswordInteractively()
+		if pErr != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", pErr)
+			os.Exit(1)
+		}
+		err = UpdateUser(cfgPath, rest[0], password)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown users subcommand: %s\n", subcmd)
 		os.Exit(1)
@@ -234,3 +245,30 @@ func UpdateUser(cfgPath, username, newPassword string) error {
 
 	return nil
 }
+
+func readPasswordInteractively() (string, error) {
+	fmt.Print("Enter password: ")
+	p1, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if err != nil {
+		return "", fmt.Errorf("read password: %w", err)
+	}
+
+	fmt.Print("Confirm password: ")
+	p2, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if err != nil {
+		return "", fmt.Errorf("read confirmation: %w", err)
+	}
+
+	if string(p1) != string(p2) {
+		return "", fmt.Errorf("passwords do not match")
+	}
+
+	if len(p1) == 0 {
+		return "", fmt.Errorf("password cannot be empty")
+	}
+
+	return string(p1), nil
+}
+
