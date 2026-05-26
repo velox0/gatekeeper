@@ -251,7 +251,7 @@ func (gw *Gateway) Reload() {
 		for _, vhost := range ln.Hosts {
 			// Find the corresponding ServerBlock by matching server name (case-insensitive)
 			for _, srvCfg := range lnCfg.Servers {
-				if strings.ToLower(srvCfg.ServerName) == strings.ToLower(vhost.Config.ServerName) {
+				if strings.EqualFold(srvCfg.ServerName, vhost.Config.ServerName) {
 					rc := gw.cfg.ResolveServer(lnCfg, srvCfg)
 					vhost.Config.Update(rc)
 					break

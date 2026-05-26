@@ -69,19 +69,12 @@
     var brandText = document.createElement("div");
     brandText.className = "xp-brand-text";
     brandText.innerHTML = 
-      '<span class="xp-brand-microsoft">Microsoft</span>' +
       '<span class="xp-brand-name">Windows<span style="font-weight:100; font-family:sans-serif; margin-left:2px;">xp</span></span>' +
       '<span class="xp-brand-edition">' + escapeHTML(appName) + ' Edition</span>';
 
     brandContainer.innerHTML = logoImg;
     brandContainer.appendChild(brandText);
     logoArea.appendChild(brandContainer);
-
-    var welcomeMsg = document.createElement("div");
-    welcomeMsg.className = "xp-welcome-msg";
-    welcomeMsg.textContent = "To begin, type your username and password, then click the green button.";
-
-    logoArea.appendChild(welcomeMsg);
     leftCol.appendChild(logoArea);
     container.appendChild(leftCol);
 
@@ -206,10 +199,7 @@
 
     bottomInner.appendChild(shutdownBtn);
 
-    var helpText = document.createElement("div");
-    helpText.className = "xp-bottom-help";
-    helpText.innerHTML = "After you log on, you will be redirected to your secure destination.<br/>Gatekeeper secures your web applications.";
-    bottomInner.appendChild(helpText);
+
 
     bottomBar.appendChild(bottomInner);
     screenDiv.appendChild(bottomBar);
