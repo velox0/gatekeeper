@@ -34,11 +34,15 @@ Gatekeeper merges global settings with listener/server-level configurations usin
 
 ## Quickstart
 
-1. **Build Gatekeeper**:
-
-   ```bash
-   go build -o gatekeeper ./cmd/gatekeeper
-   ```
+1. **Build or Install Gatekeeper**:
+   - To build locally:
+     ```bash
+     go build -o gatekeeper
+     ```
+   - To install globally:
+     ```bash
+     go install github.com/velox0/gatekeeper@latest
+     ```
 
 2. **Run with Config**:
    ```bash

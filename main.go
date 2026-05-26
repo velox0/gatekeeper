@@ -15,6 +15,8 @@ import (
 	"github.com/velox0/gatekeeper/internal/server"
 )
 
+const Version = "0.1.0"
+
 func main() {
 	cfgPath := flag.String("config", "config.example.yml", "path to config yaml")
 	pidPath := flag.String("pid", daemon.DefaultPIDPath, "path to PID file")
@@ -62,7 +64,7 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
-	fmt.Printf("starting %s (pid %d)\n", cfg.DisplayName(), os.Getpid())
+	fmt.Printf("starting %s v%s (pid %d)\n", cfg.DisplayName(), Version, os.Getpid())
 	if err := gw.Start(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
@@ -97,7 +99,7 @@ func requireRoot() {
 
 // printGeneralHelp prints usage and command options to the terminal.
 func printGeneralHelp() {
-	fmt.Println("Gatekeeper - lightweight reverse proxy & session authentication gateway")
+	fmt.Printf("Gatekeeper v%s - lightweight reverse proxy & session authentication gateway\n", Version)
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  gatekeeper [flags]                Start the gateway daemon")
