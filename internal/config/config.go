@@ -73,6 +73,16 @@ func (c *Config) DisplayName() string {
 	return defaultAppName
 }
 
+// RLock acquires a read lock on the config.
+func (c *Config) RLock() {
+	c.mu.RLock()
+}
+
+// RUnlock releases a read lock on the config.
+func (c *Config) RUnlock() {
+	c.mu.RUnlock()
+}
+
 // GetUsers returns a copy of the global user list under a read lock.
 func (c *Config) GetUsers() []UserConfig {
 	c.mu.RLock()

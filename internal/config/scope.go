@@ -1,8 +1,14 @@
 package config
 
+import (
+	"sync"
+	"time"
+)
+
 // ResolvedConfig holds the fully-merged configuration for a single virtual host.
 // It is computed by combining the global Config with a specific ServerBlock.
 type ResolvedConfig struct {
+	mu         *sync.RWMutex
 	AppName    string
 	ServerName string
 	Listen     string
@@ -11,6 +17,72 @@ type ResolvedConfig struct {
 	Security   SecurityConfig
 	Users      []UserConfig
 	Plugins    map[string]bool
+}
+
+func (rc *ResolvedConfig) rlock() {
+	if rc.mu != nil {
+		rc.mu.RLock()
+	}
+}
+
+func (rc *ResolvedConfig) runlock() {
+	if rc.mu != nil {
+		rc.mu.RUnlock()
+	}
+}
+
+func (rc *ResolvedConfig) lock() {
+	if rc.mu != nil {
+		rc.mu.Lock()
+	}
+}
+
+func (rc *ResolvedConfig) unlock() {
+	if rc.mu != nil {
+		rc.mu.Unlock()
+	}
+}
+
+// GetAppName returns the app name thread-safely.
+func (rc *ResolvedConfig) GetAppName() string {
+	rc.rlock()
+	defer rc.runlock()
+	return rc.AppName
+}
+
+// GetCookieName returns the cookie name thread-safely.
+func (rc *ResolvedConfig) GetCookieName() string {
+	rc.rlock()
+	defer rc.runlock()
+	return rc.Auth.CookieName
+}
+
+// GetSessionTTL returns the session TTL thread-safely.
+func (rc *ResolvedConfig) GetSessionTTL() time.Duration {
+	rc.rlock()
+	defer rc.runlock()
+	return rc.Auth.SessionTTL
+}
+
+// GetSecureCookies returns whether cookies require secure flag thread-safely.
+func (rc *ResolvedConfig) GetSecureCookies() bool {
+	rc.rlock()
+	defer rc.runlock()
+	return rc.Security.SecureCookies
+}
+
+// Update updates all fields of the ResolvedConfig thread-safely.
+func (rc *ResolvedConfig) Update(fresh ResolvedConfig) {
+	rc.lock()
+	defer rc.unlock()
+	rc.AppName = fresh.AppName
+	rc.ServerName = fresh.ServerName
+	rc.Listen = fresh.Listen
+	rc.Upstream = fresh.Upstream
+	rc.Auth = fresh.Auth
+	rc.Security = fresh.Security
+	rc.Users = fresh.Users
+	rc.Plugins = fresh.Plugins
 }
 
 // ResolveServer merges global-scope settings with a server block to produce
@@ -31,6 +103,7 @@ func (c *Config) ResolveServer(ln ListenerConfig, srv ServerBlock) ResolvedConfi
 	}
 
 	rc := ResolvedConfig{
+		mu:         new(sync.RWMutex),
 		AppName:    appName,
 		ServerName: srv.ServerName,
 		Listen:     ln.Listen,
@@ -79,15 +152,19 @@ func (c *Config) ResolveServer(ln ListenerConfig, srv ServerBlock) ResolvedConfi
 	return rc
 }
 
-// GetResolvedUsers returns a copy of the resolved user list.
+// GetResolvedUsers returns a copy of the resolved user list thread-safely.
 func (rc *ResolvedConfig) GetResolvedUsers() []UserConfig {
+	rc.rlock()
+	defer rc.runlock()
 	users := make([]UserConfig, len(rc.Users))
 	copy(users, rc.Users)
 	return users
 }
 
-// GetResolvedPlugins returns a copy of the resolved plugins map.
+// GetResolvedPlugins returns a copy of the resolved plugins map thread-safely.
 func (rc *ResolvedConfig) GetResolvedPlugins() map[string]bool {
+	rc.rlock()
+	defer rc.runlock()
 	out := make(map[string]bool, len(rc.Plugins))
 	for k, v := range rc.Plugins {
 		out[k] = v

@@ -125,10 +125,18 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 
 		mux := http.NewServeMux()
 
-		authHandler, err := auth.NewHandler(&rc, sessStore)
+		vhost := &VirtualHost{
+			Config:    rc,
+			Mux:       mux,
+			Proxy:     rev,
+			SessStore: sessStore,
+		}
+
+		authHandler, err := auth.NewHandler(&vhost.Config, sessStore)
 		if err != nil {
 			return nil, fmt.Errorf("server %s: auth init: %w", displayName, err)
 		}
+		vhost.Auth = authHandler
 
 		mux.HandleFunc("/login", authHandler.LoginHandler)
 		mux.HandleFunc("/logout", authHandler.LogoutHandler)
@@ -144,16 +152,8 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 			}
 		})
 
-		proxyHandler := middleware.RequireAuth(rev, &rc, sessStore)
+		proxyHandler := middleware.RequireAuth(rev, &vhost.Config, sessStore)
 		mux.Handle("/", proxyHandler)
-
-		vhost := &VirtualHost{
-			Config:    rc,
-			Mux:       mux,
-			Proxy:     rev,
-			Auth:      authHandler,
-			SessStore: sessStore,
-		}
 
 		name := strings.ToLower(srvCfg.ServerName)
 		if name != "" {
@@ -220,6 +220,45 @@ func (gw *Gateway) Start() error {
 	}
 
 	return nil
+}
+
+// Reload updates the configuration of all running virtual hosts thread-safely
+// using the current Config values.
+func (gw *Gateway) Reload() {
+	gw.mu.Lock()
+	defer gw.mu.Unlock()
+
+	gw.cfg.RLock()
+	listenersCopy := make([]config.ListenerConfig, len(gw.cfg.Listeners))
+	copy(listenersCopy, gw.cfg.Listeners)
+	gw.cfg.RUnlock()
+
+	for _, ln := range gw.listeners {
+		// Find the corresponding ListenerConfig by matching listen address
+		var lnCfg config.ListenerConfig
+		foundLn := false
+		for _, lc := range listenersCopy {
+			if lc.Listen == ln.Addr {
+				lnCfg = lc
+				foundLn = true
+				break
+			}
+		}
+		if !foundLn {
+			continue
+		}
+
+		for _, vhost := range ln.Hosts {
+			// Find the corresponding ServerBlock by matching server name (case-insensitive)
+			for _, srvCfg := range lnCfg.Servers {
+				if strings.ToLower(srvCfg.ServerName) == strings.ToLower(vhost.Config.ServerName) {
+					rc := gw.cfg.ResolveServer(lnCfg, srvCfg)
+					vhost.Config.Update(rc)
+					break
+				}
+			}
+		}
+	}
 }
 
 // Shutdown gracefully shuts down all listeners concurrently.

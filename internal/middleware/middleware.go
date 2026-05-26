@@ -16,7 +16,7 @@ func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store *session.In
 			next.ServeHTTP(w, r)
 			return
 		}
-		c, err := r.Cookie(rc.Auth.CookieName)
+		c, err := r.Cookie(rc.GetCookieName())
 		if err != nil || c.Value == "" {
 			// redirect to login for browser requests
 			if r.Header.Get("Accept") == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {

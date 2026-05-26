@@ -41,6 +41,13 @@ func main() {
 		case "config":
 			config.HandleConfigCommand(args[1:])
 			return
+		case "reload":
+			if err := daemon.SignalReload(*pidPath); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("sent reload signal to daemon")
+			return
 		default:
 			fmt.Fprintf(os.Stderr, "unknown command: %s\nRun 'gatekeeper help' for usage.\n", args[0])
 			os.Exit(1)
@@ -80,6 +87,8 @@ func main() {
 			log.Println("received SIGHUP, reloading configuration...")
 			if err := cfg.Reload(*cfgPath); err != nil {
 				log.Printf("config reload failed: %v", err)
+			} else {
+				gw.Reload()
 			}
 		case syscall.SIGINT, syscall.SIGTERM:
 			log.Printf("received %s, shutting down gracefully...", sig)
@@ -110,6 +119,7 @@ func printGeneralHelp() {
 	fmt.Println("  gatekeeper [flags] user <command>     Manage gateway users")
 	fmt.Println("  gatekeeper [flags] plugin <command>   Manage visual login plugins")
 	fmt.Println("  gatekeeper [flags] config <command>   Manage configuration & service setup")
+	fmt.Println("  gatekeeper [flags] reload             Reload running daemon configuration")
 	fmt.Println("  gatekeeper help                       Show this help message")
 	fmt.Println()
 	fmt.Println("Flags:")
@@ -120,4 +130,5 @@ func printGeneralHelp() {
 	fmt.Println("  user    Run 'gatekeeper user help' for user management commands")
 	fmt.Println("  plugin  Run 'gatekeeper plugin help' for plugin management commands")
 	fmt.Println("  config  Run 'gatekeeper config help' for configuration & service setup commands")
+	fmt.Println("  reload  Reload the running daemon's configuration")
 }

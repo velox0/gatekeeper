@@ -211,3 +211,47 @@ func TestListenerRoutesToDefaultHost(t *testing.T) {
 	}
 }
 
+func TestGatewayReload(t *testing.T) {
+	cfg := &config.Config{
+		AppName: "OldApp",
+		Auth:    config.AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
+		Listeners: []config.ListenerConfig{
+			{
+				Listen: ":0",
+				Servers: []config.ServerBlock{
+					{
+						ServerName: "app.local",
+						Upstream:   config.UpstreamConfig{Target: "http://localhost:3000"},
+					},
+				},
+			},
+		},
+	}
+
+	gw, err := NewGateway(cfg)
+	if err != nil {
+		t.Fatalf("NewGateway error: %v", err)
+	}
+
+	vhost := gw.Listeners()[0].Hosts["app.local"]
+	if vhost.Config.GetAppName() != "OldApp" {
+		t.Errorf("AppName = %q, want OldApp", vhost.Config.GetAppName())
+	}
+	if vhost.Config.GetSessionTTL() != time.Hour {
+		t.Errorf("SessionTTL = %v, want 1h", vhost.Config.GetSessionTTL())
+	}
+
+	// Update the global configuration in place and call Reload
+	cfg.AppName = "NewApp"
+	cfg.Auth.SessionTTL = 2 * time.Hour
+	gw.Reload()
+
+	if vhost.Config.GetAppName() != "NewApp" {
+		t.Errorf("AppName after reload = %q, want NewApp", vhost.Config.GetAppName())
+	}
+	if vhost.Config.GetSessionTTL() != 2*time.Hour {
+		t.Errorf("SessionTTL after reload = %v, want 2h", vhost.Config.GetSessionTTL())
+	}
+}
+
+

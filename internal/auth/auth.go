@@ -55,7 +55,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("warning: failed to load plugin assets: %v", err)
 		}
 		data := loginData{
-			AppName: h.rc.AppName,
+			AppName: h.rc.GetAppName(),
 			Plugins: loaded,
 		}
 		if msg := r.URL.Query().Get("error"); msg != "" {
@@ -103,18 +103,18 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		sess, err := h.store.Create(username, h.rc.Auth.SessionTTL)
+		sess, err := h.store.Create(username, h.rc.GetSessionTTL())
 		if err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
 		cookie := &http.Cookie{
-			Name:     h.rc.Auth.CookieName,
+			Name:     h.rc.GetCookieName(),
 			Value:    sess.ID,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.rc.Security.SecureCookies,
+			Secure:   h.rc.GetSecureCookies(),
 			SameSite: http.SameSiteLaxMode,
 			Expires:  sess.ExpiresAt,
 		}
@@ -134,18 +134,18 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	c, err := r.Cookie(h.rc.Auth.CookieName)
+	c, err := r.Cookie(h.rc.GetCookieName())
 	if err == nil {
 		h.store.Delete(c.Value)
 		// clear cookie
 		http.SetCookie(w, &http.Cookie{
-			Name:     h.rc.Auth.CookieName,
+			Name:     h.rc.GetCookieName(),
 			Value:    "",
 			Path:     "/",
 			Expires:  time.Unix(0, 0),
 			MaxAge:   -1,
 			HttpOnly: true,
-			Secure:   h.rc.Security.SecureCookies,
+			Secure:   h.rc.GetSecureCookies(),
 			SameSite: http.SameSiteLaxMode,
 		})
 	}
