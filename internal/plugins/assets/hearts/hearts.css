@@ -19,11 +19,19 @@
 .orb-3 { background: #fb7da8 !important; }
 
 .heart-launchpad {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 10;
+  z-index: auto !important;
   pointer-events: none;
   overflow: hidden;
+}
+
+.heart-bg {
+  z-index: 2;
+}
+
+.heart-fg {
+  z-index: 4;
 }
 
 .heart-float {

@@ -46,7 +46,7 @@
       .bg-gradient {
         position: fixed;
         inset: 0;
-        z-index: 0;
+        z-index: 1;
         background:
           radial-gradient(ellipse 80% 60% at 20% 30%, rgba(124, 92, 252, 0.12) 0%, transparent 60%),
           radial-gradient(ellipse 70% 50% at 80% 70%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
@@ -65,7 +65,7 @@
         border-radius: 50%;
         filter: blur(80px);
         opacity: 0.3;
-        z-index: 0;
+        z-index: 1;
         animation: orb-drift 20s ease-in-out infinite alternate;
       }
       .orb-1 { width: 400px; height: 400px; background: var(--accent); top: -10%; left: -5%; animation-duration: 18s; }
@@ -82,7 +82,7 @@
       /* ───── Card ───── */
       .card {
         position: relative;
-        z-index: 1;
+        z-index: 3;
         width: 100%;
         max-width: 420px;
         margin: 1rem;

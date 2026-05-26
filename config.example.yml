@@ -12,6 +12,7 @@ plugins:
     aurora: false
     hearts: true
     matrix: false
+    winxp: false
 # ─── Listeners ───
 listeners:
     # Example 1: Catch-all listener (no server_name). Matches any host on port :8080.
@@ -20,14 +21,12 @@ listeners:
         - server_name: ""
           upstream:
             target: http://localhost:3000
-          routes: []
     # Example 2: Virtual Host routing (with server_name). Only matches matching Host header on port :9090.
     - listen: :9090
       servers:
         - server_name: app.local
           upstream:
             target: http://localhost:3000
-          routes: []
           users:
             - username: test
               password_hash: $2a$10$TVmAnyL4XOI0Y9Y5HaIm0.lu/5PbyyXm/bmEmgRUwv.dW/uBz1h0C

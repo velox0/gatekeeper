@@ -19,6 +19,7 @@ plugins:
   aurora: false
   hearts: true
   matrix: false
+  winxp: false
 
 # ─── Listeners & Virtual Hosts ───
 listeners:

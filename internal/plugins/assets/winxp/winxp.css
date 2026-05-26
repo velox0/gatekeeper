@@ -1,0 +1,542 @@
+/* Windows XP Welcome Screen Style */
+
+/* Hide default modern elements */
+.card,
+.bg-gradient,
+.orb {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #5a7dc9 !important;
+  font-family: Tahoma, 'MS Sans Serif', Arial, sans-serif;
+  overflow: hidden !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  box-sizing: border-box;
+}
+
+#winxp-screen {
+  position: absolute;
+  inset: 0;
+  z-index: auto !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#winxp-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 45% 50%, #5a7edc 0%, #304e9c 100%);
+  pointer-events: none;
+}
+
+/* ───── Top Bar ───── */
+.xp-top-bar {
+  position: relative;
+  z-index: 3;
+  height: 80px;
+  background: linear-gradient(to bottom, #001f7a, #002d96);
+  border-bottom: 2px solid #fab34d;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.xp-top-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ───── Bottom Bar ───── */
+.xp-bottom-bar {
+  position: relative;
+  z-index: 3;
+  height: 80px;
+  background: linear-gradient(to top, #001f7a, #002d96);
+  border-top: 2px solid #fab34d;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  flex-shrink: 0;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.xp-bottom-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Turn off computer button */
+.xp-shutdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.xp-shutdown-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.xp-shutdown-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #e43d2b, #b0190a);
+  border: 1px solid #7c0b00;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 2px 4px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.2s;
+}
+
+.xp-shutdown-btn:hover .xp-shutdown-icon {
+  filter: brightness(1.2);
+}
+
+.xp-shutdown-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  fill: none;
+}
+
+.xp-shutdown-text {
+  color: #e5ecff;
+  font-size: 13px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.xp-shutdown-btn:hover .xp-shutdown-text {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.xp-bottom-help {
+  color: #c5d2f6;
+  font-size: 12px;
+  max-width: 500px;
+  text-align: right;
+  line-height: 1.4;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* ───── Middle Panel ───── */
+.xp-middle {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 40px;
+  overflow: auto;
+}
+
+.xp-container {
+  display: flex;
+  width: 100%;
+  max-width: 1000px;
+  height: 380px;
+  align-items: center;
+}
+
+/* Left Column: Logo & Welcome */
+.xp-left-col {
+  flex: 1.1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding-right: 48px;
+  text-align: right;
+}
+
+.xp-logo-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.xp-brand-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.xp-flag-svg {
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.4));
+}
+
+.xp-brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #ffffff;
+}
+
+.xp-brand-microsoft {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-bottom: -4px;
+  opacity: 0.9;
+}
+
+.xp-brand-name {
+  font-size: 40px;
+  font-weight: bold;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.xp-brand-edition {
+  color: #f7921e;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+.xp-welcome-msg {
+  color: #b5cbf7;
+  font-size: 14px;
+  font-weight: normal;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* Center Divider */
+.xp-divider {
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.05) 10%, 
+    #b5c5e8 40%, 
+    #ffffff 50%, 
+    #b5c5e8 60%, 
+    rgba(255,255,255,0.05) 90%, 
+    rgba(255,255,255,0) 100%
+  );
+  box-shadow: -1px 0 0 rgba(0,0,0,0.15), 1px 0 0 rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+/* Right Column: User Accounts & Logon Form */
+.xp-right-col {
+  flex: 1.2;
+  padding-left: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Logon Form Wrapper */
+.xp-logon-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 380px;
+  animation: panel-fade-in 0.4s ease-out;
+}
+
+@keyframes panel-fade-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* User item container */
+.xp-user-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.xp-user-row:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* XP Avatar Frame */
+.xp-avatar-frame {
+  width: 58px;
+  height: 58px;
+  border-radius: 5px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  background-color: #38569c;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.xp-user-row:hover .xp-avatar-frame,
+.xp-avatar-frame.active {
+  border-color: #e89b25;
+  box-shadow: 0 0 8px rgba(232, 155, 37, 0.8), 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.xp-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.xp-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.xp-user-name {
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  font-family: Arial, sans-serif;
+}
+
+.xp-user-status {
+  color: #b5cbf7;
+  font-size: 12px;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+  margin-top: 2px;
+}
+
+/* XP Form Fields */
+.xp-form-container {
+  margin-left: 74px; /* Align with input start after avatar */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: calc(100% - 74px);
+}
+
+.xp-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xp-input-label {
+  color: #ffffff;
+  font-size: 12px;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+}
+
+.xp-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.xp-input {
+  flex: 1;
+  background-color: #ffffff;
+  border: 1px solid #7f9db9;
+  padding: 4px 6px;
+  font-size: 14px;
+  color: #000000;
+  outline: none;
+  font-family: Tahoma, Arial, sans-serif;
+  height: 24px;
+  box-sizing: border-box;
+}
+
+.xp-input:focus {
+  border-color: #4d8cf4;
+  box-shadow: 0 0 3px rgba(77, 140, 244, 0.5);
+}
+
+/* XP Go Button (Green Circle with white arrow) */
+.xp-go-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #7ad75d, #3c9323);
+  border: 1px solid #236511;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: filter 0.15s;
+  flex-shrink: 0;
+}
+
+.xp-go-btn:hover {
+  filter: brightness(1.15);
+}
+
+.xp-go-btn:active {
+  background: linear-gradient(135deg, #3c9323, #236511);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.xp-go-btn svg {
+  width: 12px;
+  height: 12px;
+  fill: #ffffff;
+}
+
+/* ───── Speech bubble for errors (Nostalgic Balloon Tooltip) ───── */
+.xp-error-balloon {
+  position: relative;
+  background: #ffffe1;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  padding: 10px 14px;
+  color: #000000;
+  font-size: 12px;
+  max-width: 260px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.25);
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: balloon-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes balloon-pop {
+  from { opacity: 0; transform: scale(0.8) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.xp-error-balloon::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  border-width: 0 10px 12px 10px;
+  border-style: solid;
+  border-color: transparent transparent #000000 transparent;
+  display: block;
+  width: 0;
+}
+
+.xp-error-balloon::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 21px;
+  border-width: 0 9px 11px 9px;
+  border-style: solid;
+  border-color: transparent transparent #ffffe1 transparent;
+  display: block;
+  width: 0;
+}
+
+.xp-error-header {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.xp-error-icon-svg {
+  width: 16px;
+  height: 16px;
+  fill: #d32f2f;
+  flex-shrink: 0;
+}
+
+.xp-error-message {
+  line-height: 1.4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #winxp-screen {
+    overflow-y: auto;
+  }
+  .xp-container {
+    flex-direction: column;
+    height: auto;
+    gap: 30px;
+    align-items: center;
+  }
+  .xp-left-col {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+  .xp-logo-area {
+    align-items: center;
+  }
+  .xp-brand-text {
+    align-items: center;
+  }
+  .xp-divider {
+    width: 80%;
+    height: 1px;
+    margin: 10px 0;
+  }
+  .xp-right-col {
+    padding-left: 0;
+    align-items: center;
+    width: 100%;
+  }
+  .xp-logon-panel {
+    align-items: center;
+  }
+  .xp-form-container {
+    margin-left: 0;
+    width: 100%;
+  }
+  .xp-bottom-inner {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .xp-bottom-help {
+    text-align: center;
+  }
+}

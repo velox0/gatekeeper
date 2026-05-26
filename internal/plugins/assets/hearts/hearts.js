@@ -17,7 +17,7 @@
 
   function spawnHeart(lp) {
     var h = document.createElement("span");
-    h.className = "heart-float";
+    h.className = "heart-float " + (Math.random() > 0.5 ? "heart-fg" : "heart-bg");
     h.textContent = HEARTS[Math.floor(Math.random() * HEARTS.length)];
     h.style.left       = rand(2, 98) + "vw";
     h.style.fontSize   = rand(14, 34) + "px";

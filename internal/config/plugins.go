@@ -22,6 +22,7 @@ func init() {
 	RegisterPlugin("hearts", "Floating heart emoji burst on page load")
 	RegisterPlugin("matrix", "Matrix-style digital rain background")
 	RegisterPlugin("aurora", "Animated northern-lights color bands")
+	RegisterPlugin("winxp", "Windows XP Welcome Screen theme")
 }
 
 // RegisterPlugin adds a plugin to the global registry.
