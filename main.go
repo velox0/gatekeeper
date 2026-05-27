@@ -15,7 +15,7 @@ import (
 	"github.com/velox0/gatekeeper/internal/server"
 )
 
-const Version = "0.1.2"
+const Version = "0.1.3"
 
 func main() {
 	cfgPath := flag.String("config", "config.example.yml", "path to config yaml")
