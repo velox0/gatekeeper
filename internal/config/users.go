@@ -21,6 +21,8 @@ const maxBcryptPasswordLen = 72
 //	gatekeeper user remove <username>
 //	gatekeeper user update <username>
 func HandleUserCommand(cfgPath, pidPath string, args []string) {
+	cfgPath = ResolveConfigPath(cfgPath, pidPath)
+
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printUserHelp()
 		os.Exit(0)
@@ -293,4 +295,3 @@ func printUserHelp() {
 	fmt.Println("  gatekeeper user update <username>  Update a user's password")
 	fmt.Println("  gatekeeper user help               Show this help message")
 }
-

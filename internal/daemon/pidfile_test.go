@@ -61,3 +61,25 @@ func TestRemovePIDMissingFileNoError(t *testing.T) {
 	// RemovePID should not panic on missing files.
 	RemovePID(filepath.Join(t.TempDir(), "nonexistent.pid"))
 }
+
+func TestWriteReadAndRemoveConfigPath(t *testing.T) {
+	pidPath := filepath.Join(t.TempDir(), "gatekeeper.pid")
+	configPath := filepath.Join(t.TempDir(), "config.yml")
+
+	if err := WriteConfigPath(pidPath, configPath); err != nil {
+		t.Fatalf("WriteConfigPath error: %v", err)
+	}
+
+	got, err := ReadConfigPath(pidPath)
+	if err != nil {
+		t.Fatalf("ReadConfigPath error: %v", err)
+	}
+	if got != configPath {
+		t.Fatalf("ReadConfigPath = %q, want %q", got, configPath)
+	}
+
+	RemoveConfigPath(pidPath)
+	if _, err := os.Stat(ConfigPathFile(pidPath)); !os.IsNotExist(err) {
+		t.Fatal("config path file should have been removed")
+	}
+}

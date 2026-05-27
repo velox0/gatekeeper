@@ -15,10 +15,10 @@ import (
 	"github.com/velox0/gatekeeper/internal/server"
 )
 
-const Version = "0.1.3"
+const Version = "0.1.4"
 
 func main() {
-	cfgPath := flag.String("config", "config.example.yml", "path to config yaml")
+	cfgPath := flag.String("config", "/etc/gatekeeper/config.yml", "path to config yaml")
 	pidPath := flag.String("pid", daemon.DefaultPIDPath, "path to PID file")
 	flag.Usage = printGeneralHelp
 	flag.Parse()
@@ -65,6 +65,11 @@ func main() {
 		log.Fatalf("failed to write PID file: %v", err)
 	}
 	defer daemon.RemovePID(*pidPath)
+	if err := daemon.WriteConfigPath(*pidPath, *cfgPath); err != nil {
+		daemon.RemovePID(*pidPath)
+		log.Fatalf("failed to write config path metadata: %v", err)
+	}
+	defer daemon.RemoveConfigPath(*pidPath)
 
 	gw, err := server.NewGateway(cfg)
 	if err != nil {
@@ -123,7 +128,7 @@ func printGeneralHelp() {
 	fmt.Println("  gatekeeper help                       Show this help message")
 	fmt.Println()
 	fmt.Println("Flags:")
-	fmt.Println("  -config string   path to config yaml (default \"config.example.yml\")")
+	fmt.Println("  -config string   path to config yaml (default \"/etc/gatekeeper/config.yml\")")
 	fmt.Println("  -pid string      path to PID file (default \"/var/run/gatekeeper.pid\")")
 	fmt.Println()
 	fmt.Println("Commands:")

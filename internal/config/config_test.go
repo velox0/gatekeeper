@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/velox0/gatekeeper/internal/daemon"
 )
 
 func writeConfig(t *testing.T, body string) string {
@@ -303,6 +305,26 @@ listeners:
 	}
 }
 
+func TestResolveConfigPathPrefersDaemonMetadata(t *testing.T) {
+	pidPath := filepath.Join(t.TempDir(), "gatekeeper.pid")
+	activePath := filepath.Join(t.TempDir(), "active.yml")
+	if err := daemon.WriteConfigPath(pidPath, activePath); err != nil {
+		t.Fatalf("WriteConfigPath error: %v", err)
+	}
+
+	got := ResolveConfigPath("fallback.yml", pidPath)
+	if got != activePath {
+		t.Fatalf("ResolveConfigPath = %q, want %q", got, activePath)
+	}
+}
+
+func TestResolveConfigPathFallsBackWhenMetadataMissing(t *testing.T) {
+	got := ResolveConfigPath("fallback.yml", filepath.Join(t.TempDir(), "missing.pid"))
+	if got != "fallback.yml" {
+		t.Fatalf("ResolveConfigPath = %q, want fallback.yml", got)
+	}
+}
+
 func TestLoadConfigAllowsOptionalServerName(t *testing.T) {
 	cfg, err := LoadConfig(writeConfig(t, `
 listeners:
@@ -336,4 +358,3 @@ listeners:
 		t.Fatalf("unexpected error message: %v", err)
 	}
 }
-

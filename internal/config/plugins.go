@@ -98,6 +98,8 @@ func IsKnownPlugin(name string) bool {
 //	gatekeeper plugin enable  <name>
 //	gatekeeper plugin disable <name>
 func HandlePluginCommand(cfgPath, pidPath string, args []string) {
+	cfgPath = ResolveConfigPath(cfgPath, pidPath)
+
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printPluginHelp()
 		os.Exit(0)

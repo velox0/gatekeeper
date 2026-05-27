@@ -5,13 +5,18 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/velox0/gatekeeper/internal/daemon"
 	"gopkg.in/yaml.v3"
 )
 
 const defaultAppName = "Gatekeeper"
+
+// DefaultConfigPath is the conventional system-wide config location.
+const DefaultConfigPath = "/etc/gatekeeper/gatekeeper.config"
 
 // AuthConfig controls session cookie settings.
 type AuthConfig struct {
@@ -103,6 +108,36 @@ func (c *Config) GetPlugins() map[string]bool {
 	return out
 }
 
+// ResolveConfigPath returns the active daemon config path when available,
+// otherwise it falls back to the supplied path.
+func ResolveConfigPath(fallbackPath, pidPath string) string {
+	if activePath, err := daemon.ReadConfigPath(pidPath); err == nil && activePath != "" {
+		return activePath
+	}
+
+	// If the supplied path exists, use it.
+	if _, err := os.Stat(fallbackPath); err == nil {
+		return fallbackPath
+	}
+
+	// Convenience fallbacks for local/dev usage.
+	// Only apply these when the caller is using the conventional system default,
+	// so we don't mask explicit -config typos.
+	if fallbackPath == DefaultConfigPath {
+		if _, err := os.Stat("config.example.yml"); err == nil {
+			return "config.example.yml"
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			candidate := filepath.Join(home, ".gatekeeper", "config.yml")
+			if _, err := os.Stat(candidate); err == nil {
+				return candidate
+			}
+		}
+	}
+
+	return fallbackPath
+}
+
 // Reload re-reads the config file from disk and swaps all mutable state
 // (users, plugins) at both global and server-block level.
 func (c *Config) Reload(path string) error {
@@ -126,8 +161,6 @@ func (c *Config) Reload(path string) error {
 		len(fresh.Users), len(fresh.Plugins), len(fresh.Listeners))
 	return nil
 }
-
-
 
 // SaveConfig marshals the config and writes it to the given path,
 // preserving any comments that exist in the original file.

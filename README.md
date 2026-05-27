@@ -20,15 +20,15 @@ Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authen
 
 Gatekeeper merges global settings with listener/server-level configurations using the following inheritance rules:
 
-| Scope Directive | Merge Strategy | Behaviour                                                                                                           |
-| :-------------- | :------------- | :------------------------------------------------------------------------------------------------------------------ |
-| `app_name`      | **Fallback**   | Configures the white-labeled portal display name (logo, title, logs). Defaults to `"Gatekeeper"`.                   |
-| `server_name`   | **Optional**   | Hostname to match. If omitted, the block acts as a catch-all default fallback for the listener (at most one per port).|
-| `users`         | **Union**      | Both global and server-local users are authorized to log in. Local users shadow global users if usernames conflict. |
-| `plugins`       | **Merge**      | Global plugins are active by default. Server-specific plugin maps can override individual plugins (enable/disable). |
-| `auth`          | **Override**   | A server-level `auth` block overrides individual global fields (such as `cookie_name` and `session_ttl`).           |
-| `security`      | **Override**   | A server-level `security` block (e.g. `secure_cookies: true`) overrides the global settings.                        |
-| `upstream`      | **Required**   | Configured per server block. Defines the backend destination URL (e.g. `http://localhost:3000`).                    |
+| Scope Directive | Merge Strategy | Behaviour                                                                                                              |
+| :-------------- | :------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| `app_name`      | **Fallback**   | Configures the white-labeled portal display name (logo, title, logs). Defaults to `"Gatekeeper"`.                      |
+| `server_name`   | **Optional**   | Hostname to match. If omitted, the block acts as a catch-all default fallback for the listener (at most one per port). |
+| `users`         | **Union**      | Both global and server-local users are authorized to log in. Local users shadow global users if usernames conflict.    |
+| `plugins`       | **Merge**      | Global plugins are active by default. Server-specific plugin maps can override individual plugins (enable/disable).    |
+| `auth`          | **Override**   | A server-level `auth` block overrides individual global fields (such as `cookie_name` and `session_ttl`).              |
+| `security`      | **Override**   | A server-level `security` block (e.g. `secure_cookies: true`) overrides the global settings.                           |
+| `upstream`      | **Required**   | Configured per server block. Defines the backend destination URL (e.g. `http://localhost:3000`).                       |
 
 ---
 
@@ -45,10 +45,19 @@ Gatekeeper merges global settings with listener/server-level configurations usin
      ```
 
 2. **Run with Config**:
+
    ```bash
-   sudo ./gatekeeper -config config.example.yml
+
    ```
-   _(Note: Binding to low ports or managing system-wide PID files may require root privileges)._
+
+# Default config path: /etc/gatekeeper/config.yml
+
+# For local/dev, pass an explicit file:
+
+sudo ./gatekeeper -config config.example.yml
+
+````
+_(Note: Binding to low ports or managing system-wide PID files may require root privileges)._
 
 ---
 
@@ -60,42 +69,42 @@ The config file uses standard YAML. Comments are preserved when saved dynamicall
 # ─── Global scope (inherited by all listeners/servers unless overridden) ───
 app_name: Gatekeeper # Custom display name for logs and login UI
 auth:
-  cookie_name: gatekeeper_session
-  session_ttl: 24h0m0s
+cookie_name: gatekeeper_session
+session_ttl: 24h0m0s
 security:
-  secure_cookies: false
+secure_cookies: false
 users:
-  - username: global-admin
-    password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K # bcrypt hash for "test"
+- username: global-admin
+ password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K # bcrypt hash for "test"
 plugins:
-  aurora: false
-  hearts: true
-  matrix: false
+aurora: false
+hearts: true
+matrix: false
 
 # ─── Listeners & Virtual Hosts ───
 listeners:
-  # Example 1: Catch-all listener (no server_name). Matches any host header on port :8080.
-  - listen: ":8080"
-    servers:
-      - upstream:
-          target: http://localhost:3000
+# Example 1: Catch-all listener (no server_name). Matches any host header on port :8080.
+- listen: ":8080"
+ servers:
+   - upstream:
+       target: http://localhost:3000
 
-  # Example 2: Virtual Host routing (with server_name). Only matches matching Host header on port :9090.
-  - listen: ":9090"
-    servers:
-      - server_name: app.local
-        upstream:
-          target: http://localhost:4000
-        plugins:
-          matrix: true # Overrides global: enable matrix, disable hearts
-          hearts: false
+# Example 2: Virtual Host routing (with server_name). Only matches matching Host header on port :9090.
+- listen: ":9090"
+ servers:
+   - server_name: app.local
+     upstream:
+       target: http://localhost:4000
+     plugins:
+       matrix: true # Overrides global: enable matrix, disable hearts
+       hearts: false
 
-      - server_name: admin.local
-        upstream:
-          target: http://localhost:5000
-        users:
-          - username: admin-user # Local user only allowed on admin.local
-            password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
+   - server_name: admin.local
+     upstream:
+       target: http://localhost:5000
+     users:
+       - username: admin-user # Local user only allowed on admin.local
+         password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
 ```,StartLine:72,TargetContent:
 
 ---
@@ -109,9 +118,10 @@ Gatekeeper includes interactive management tools to adjust users and login page 
 User commands modify the config file, require root privileges, and prompt securely for the password interactively (requiring 2-time confirmation).
 
 - **Add User**:
-  ```bash
-  sudo ./gatekeeper user add <username>
-  ```
+```bash
+sudo ./gatekeeper user add <username>
+````
+
 - **Update Password**:
   ```bash
   sudo ./gatekeeper user update <username>
