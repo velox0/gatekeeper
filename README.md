@@ -1,5 +1,13 @@
 # Gatekeeper
 
+<div align="center">
+
+<img width="600" src="./images/screenshot.webp" alt="Gatekeeper Login Page Screenshot" />
+
+<i>Screenshot of the Gatekeeper login page with the "hearts" and "winxp" plugins</i>
+
+</div>
+
 Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authentication gateway written in Go. It secures your web applications, internal tools, APIs, and documentation by intercepting incoming requests, displaying a premium login screen for unauthenticated users, and proxying authenticated sessions to target upstreams.
 
 ---
@@ -47,7 +55,7 @@ Gatekeeper merges global settings with listener/server-level configurations usin
 2. **Run with Config**:
 
    ```bash
-
+    gatekeeper -config /path/to/config.yml
    ```
 
 # Default config path: /etc/gatekeeper/config.yml
