@@ -1,22 +1,28 @@
 /* Hearts plugin — override page theme to warm pink/rose */
 :root {
-  --bg-deep:      #12060a;
-  --bg-mid:       #1f0c14;
-  --card-bg:      rgba(255, 200, 220, 0.04);
-  --card-border:  rgba(255, 150, 180, 0.1);
-  --text:         #f0e0e6;
-  --text-dim:     #a07888;
-  --accent:       #e8457a;
-  --accent-2:     #f472b6;
-  --accent-glow:  rgba(232, 69, 122, 0.35);
-  --input-bg:     rgba(255, 200, 220, 0.06);
+  --bg-deep: #12060a;
+  --bg-mid: #1f0c14;
+  --card-bg: rgba(255, 200, 220, 0.04);
+  --card-border: rgba(255, 150, 180, 0.1);
+  --text: #f0e0e6;
+  --text-dim: #a07888;
+  --accent: #e8457a;
+  --accent-2: #f472b6;
+  --accent-glow: rgba(232, 69, 122, 0.35);
+  --input-bg: rgba(255, 200, 220, 0.06);
   --input-border: rgba(255, 150, 180, 0.12);
-  --input-focus:  rgba(232, 69, 122, 0.45);
+  --input-focus: rgba(232, 69, 122, 0.45);
 }
 
-.orb-1 { background: #e8457a !important; }
-.orb-2 { background: #f472b6 !important; }
-.orb-3 { background: #fb7da8 !important; }
+.orb-1 {
+  background: #e8457a !important;
+}
+.orb-2 {
+  background: #f472b6 !important;
+}
+.orb-3 {
+  background: #fb7da8 !important;
+}
 
 .heart-launchpad {
   position: absolute;
@@ -55,10 +61,8 @@
   }
   100% {
     opacity: 0;
-    transform:
-      translateY(calc(-110vh + calc(var(--lift) * 1vh)))
-      translateX(calc(var(--drift) * 1vw))
-      rotate(calc(var(--spin) * 1deg))
+    transform: translateY(calc(-110vh + calc(var(--lift) * 1vh)))
+      translateX(calc(var(--drift) * 1vw)) rotate(calc(var(--spin) * 1deg))
       scale(1);
   }
 }

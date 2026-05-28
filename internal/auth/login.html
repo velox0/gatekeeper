@@ -3,31 +3,43 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="description" content="{{.AppName}} — secure authentication gateway login" />
+    <meta
+      name="description"
+      content="{{.AppName}} — secure authentication gateway login"
+    />
     <title>{{.AppName}} — Sign In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       /* ───── Reset & Base ───── */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
       :root {
-        --bg-deep:   #06060f;
-        --bg-mid:    #0d0d1f;
-        --card-bg:   rgba(255, 255, 255, 0.04);
+        --bg-deep: #06060f;
+        --bg-mid: #0d0d1f;
+        --card-bg: rgba(255, 255, 255, 0.04);
         --card-border: rgba(255, 255, 255, 0.08);
-        --text:      #e4e4ef;
-        --text-dim:  #8888a4;
-        --accent:    #7c5cfc;
-        --accent-2:  #a78bfa;
+        --text: #e4e4ef;
+        --text-dim: #8888a4;
+        --accent: #7c5cfc;
+        --accent-2: #a78bfa;
         --accent-glow: rgba(124, 92, 252, 0.35);
-        --danger:    #f87171;
-        --input-bg:  rgba(255, 255, 255, 0.05);
+        --danger: #f87171;
+        --input-bg: rgba(255, 255, 255, 0.05);
         --input-border: rgba(255, 255, 255, 0.1);
         --input-focus: rgba(124, 92, 252, 0.5);
-        --radius:    12px;
-        --font:      'Inter', system-ui, -apple-system, sans-serif;
+        --radius: 12px;
+        --font: "Inter", system-ui, -apple-system, sans-serif;
       }
 
       body {
@@ -48,15 +60,33 @@
         inset: 0;
         z-index: 1;
         background:
-          radial-gradient(ellipse 80% 60% at 20% 30%, rgba(124, 92, 252, 0.12) 0%, transparent 60%),
-          radial-gradient(ellipse 70% 50% at 80% 70%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
-          radial-gradient(ellipse 50% 40% at 50% 100%, rgba(167, 139, 250, 0.06) 0%, transparent 50%);
+          radial-gradient(
+            ellipse 80% 60% at 20% 30%,
+            rgba(124, 92, 252, 0.12) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 70% 50% at 80% 70%,
+            rgba(59, 130, 246, 0.08) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 50% 40% at 50% 100%,
+            rgba(167, 139, 250, 0.06) 0%,
+            transparent 50%
+          );
         animation: bg-shift 12s ease-in-out infinite alternate;
       }
 
       @keyframes bg-shift {
-        0%   { opacity: 0.7; transform: scale(1); }
-        100% { opacity: 1;   transform: scale(1.05); }
+        0% {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.05);
+        }
       }
 
       /* Floating orbs */
@@ -68,15 +98,46 @@
         z-index: 1;
         animation: orb-drift 20s ease-in-out infinite alternate;
       }
-      .orb-1 { width: 400px; height: 400px; background: var(--accent); top: -10%; left: -5%; animation-duration: 18s; }
-      .orb-2 { width: 300px; height: 300px; background: #3b82f6; bottom: -8%; right: -5%; animation-duration: 22s; animation-delay: -5s; }
-      .orb-3 { width: 200px; height: 200px; background: #a78bfa; top: 50%; left: 60%; animation-duration: 16s; animation-delay: -8s; }
+      .orb-1 {
+        width: 400px;
+        height: 400px;
+        background: var(--accent);
+        top: -10%;
+        left: -5%;
+        animation-duration: 18s;
+      }
+      .orb-2 {
+        width: 300px;
+        height: 300px;
+        background: #3b82f6;
+        bottom: -8%;
+        right: -5%;
+        animation-duration: 22s;
+        animation-delay: -5s;
+      }
+      .orb-3 {
+        width: 200px;
+        height: 200px;
+        background: #a78bfa;
+        top: 50%;
+        left: 60%;
+        animation-duration: 16s;
+        animation-delay: -8s;
+      }
 
       @keyframes orb-drift {
-        0%   { transform: translate(0, 0) scale(1); }
-        33%  { transform: translate(30px, -20px) scale(1.1); }
-        66%  { transform: translate(-20px, 30px) scale(0.95); }
-        100% { transform: translate(10px, -10px) scale(1.05); }
+        0% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(30px, -20px) scale(1.1);
+        }
+        66% {
+          transform: translate(-20px, 30px) scale(0.95);
+        }
+        100% {
+          transform: translate(10px, -10px) scale(1.05);
+        }
       }
 
       /* ───── Card ───── */
@@ -93,15 +154,21 @@
         backdrop-filter: blur(24px) saturate(1.4);
         -webkit-backdrop-filter: blur(24px) saturate(1.4);
         box-shadow:
-          0 0 0 1px rgba(255,255,255,0.02),
+          0 0 0 1px rgba(255, 255, 255, 0.02),
           0 20px 60px -12px rgba(0, 0, 0, 0.5),
           0 0 80px -20px var(--accent-glow);
         animation: card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
       }
 
       @keyframes card-enter {
-        from { opacity: 0; transform: translateY(30px) scale(0.96); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
+        from {
+          opacity: 0;
+          transform: translateY(30px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
 
       /* ───── Logo & Header ───── */
@@ -143,8 +210,14 @@
       }
 
       @keyframes fade-in {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       /* ───── Error Banner ───── */
@@ -173,11 +246,22 @@
       }
 
       @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        20% { transform: translateX(-6px); }
-        40% { transform: translateX(6px); }
-        60% { transform: translateX(-4px); }
-        80% { transform: translateX(4px); }
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-4px);
+        }
+        80% {
+          transform: translateX(4px);
+        }
       }
 
       /* ───── Form Fields ───── */
@@ -185,8 +269,12 @@
         margin-bottom: 18px;
         animation: fade-in 0.6s both;
       }
-      .field:nth-child(1) { animation-delay: 0.2s; }
-      .field:nth-child(2) { animation-delay: 0.3s; }
+      .field:nth-child(1) {
+        animation-delay: 0.2s;
+      }
+      .field:nth-child(2) {
+        animation-delay: 0.3s;
+      }
 
       .field label {
         display: block;
@@ -226,7 +314,10 @@
         border: 1px solid var(--input-border);
         border-radius: var(--radius);
         outline: none;
-        transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+        transition:
+          border-color 0.25s,
+          box-shadow 0.25s,
+          background 0.25s;
       }
 
       .field input::placeholder {
@@ -236,7 +327,9 @@
       .field input:focus {
         border-color: var(--accent);
         background: rgba(255, 255, 255, 0.07);
-        box-shadow: 0 0 0 3px var(--input-focus), 0 0 20px -4px var(--accent-glow);
+        box-shadow:
+          0 0 0 3px var(--input-focus),
+          0 0 20px -4px var(--accent-glow);
       }
 
       .field input:focus ~ svg,
@@ -259,15 +352,22 @@
         cursor: pointer;
         position: relative;
         overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
         animation: fade-in 0.6s 0.4s both;
       }
 
       .btn-submit::before {
-        content: '';
+        content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+        background: linear-gradient(
+          135deg,
+          transparent 40%,
+          rgba(255, 255, 255, 0.15) 50%,
+          transparent 60%
+        );
         transform: translateX(-100%);
         transition: transform 0.5s;
       }
@@ -297,8 +397,13 @@
 
       /* ───── Responsive ───── */
       @media (max-width: 480px) {
-        .card { padding: 28px 20px 24px; border-radius: 16px; }
-        .logo-text { font-size: 1.15rem; }
+        .card {
+          padding: 28px 20px 24px;
+          border-radius: 16px;
+        }
+        .logo-text {
+          font-size: 1.15rem;
+        }
       }
     </style>
 
@@ -316,7 +421,9 @@
     <div class="card">
       <div class="logo">
         <svg class="logo-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" />
+          <path
+            d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z"
+          />
           <polyline points="9 12 11 14 15 10" />
         </svg>
         <span class="logo-text">{{.AppName}}</span>
@@ -325,7 +432,11 @@
 
       {{if .Error}}
       <div class="error-banner" role="alert">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
         <span>{{.Error}}</span>
       </div>
       {{end}}
@@ -334,15 +445,36 @@
         <div class="field">
           <label for="username">Username</label>
           <div class="input-wrap">
-            <input id="username" name="username" type="text" placeholder="Enter your username" autocomplete="username" required autofocus />
-            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="Enter your username"
+              autocomplete="username"
+              required
+              autofocus
+            />
+            <svg viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </div>
         </div>
         <div class="field">
           <label for="password">Password</label>
           <div class="input-wrap">
-            <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required />
-            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
           </div>
         </div>
         <button type="submit" class="btn-submit" id="btn-login">Sign in</button>
