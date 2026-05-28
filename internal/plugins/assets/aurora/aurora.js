@@ -1,13 +1,13 @@
 (function () {
-  var mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (mq.matches) return;
 
-  var wrap = document.createElement("div");
+  const wrap = document.createElement("div");
   wrap.className = "aurora-wrap";
   wrap.setAttribute("aria-hidden", "true");
 
-  for (var i = 1; i <= 3; i++) {
-    var band = document.createElement("div");
+  for (let i = 1; i <= 3; i++) {
+    const band = document.createElement("div");
     band.className = "aurora-band aurora-band-" + i;
     wrap.appendChild(band);
   }
