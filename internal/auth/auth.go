@@ -63,7 +63,16 @@ type loginData struct {
 }
 
 func NewHandler(rc *config.ResolvedConfig, store *session.InMemoryStore) (*Handler, error) {
-	t, err := template.ParseFS(loginPage, "login.html")
+	data, err := loginPage.ReadFile("login.html")
+	if err != nil {
+		return nil, err
+	}
+	if minified, err := minifyLoginHTML(data); err == nil {
+		data = minified
+	} else {
+		log.Printf("warning: failed to minify login template: %v", err)
+	}
+	t, err := template.New("login.html").Parse(string(data))
 	if err != nil {
 		return nil, err
 	}
@@ -90,14 +99,8 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		payload := buf.Bytes()
-		if minified, err := minifyLoginHTML(payload); err == nil {
-			payload = minified
-		} else {
-			log.Printf("warning: failed to minify login HTML: %v", err)
-		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if _, err := w.Write(payload); err != nil {
+		if _, err := w.Write(buf.Bytes()); err != nil {
 			return
 		}
 		return
