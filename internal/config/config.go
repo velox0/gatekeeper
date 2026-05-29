@@ -142,6 +142,9 @@ func ResolveConfigPath(fallbackPath, pidPath string) string {
 // Reload re-reads the config file from disk and swaps all mutable state
 // (users, plugins) at both global and server-block level.
 func (c *Config) Reload(path string) error {
+	if err := ensureConfigFileSecure(path); err != nil {
+		return fmt.Errorf("reload: config file security check failed: %w", err)
+	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("reload: failed to read config: %w", err)
@@ -169,6 +172,14 @@ func SaveConfig(cfg *Config, path string) error {
 	cfg.mu.RLock()
 	defer cfg.mu.RUnlock()
 
+	if _, err := os.Stat(path); err == nil {
+		if err := ensureConfigFileSecure(path); err != nil {
+			return fmt.Errorf("config file security check failed: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat config file: %w", err)
+	}
+
 	// Marshal the current struct into a fresh yaml.Node.
 	newBytes, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -192,7 +203,16 @@ func SaveConfig(cfg *Config, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal final config: %w", err)
 	}
-	return os.WriteFile(path, out, 0600)
+	if err := os.WriteFile(path, out, 0600); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+	if err := os.Chmod(path, 0600); err != nil {
+		return fmt.Errorf("failed to set config permissions: %w", err)
+	}
+	if err := ensureConfigFileSecure(path); err != nil {
+		return fmt.Errorf("config file security check failed: %w", err)
+	}
+	return nil
 }
 
 // transferComments recursively copies HeadComment, LineComment, and
@@ -245,6 +265,9 @@ func transferComments(old, new *yaml.Node) {
 
 // LoadConfig reads and validates the configuration from a YAML file.
 func LoadConfig(path string) (*Config, error) {
+	if err := ensureConfigFileSecure(path); err != nil {
+		return nil, fmt.Errorf("config file security check failed: %w", err)
+	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
