@@ -8,6 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/tdewolff/minify/v2"
+	minifycss "github.com/tdewolff/minify/v2/css"
+	minifyhtml "github.com/tdewolff/minify/v2/html"
+	minifyjs "github.com/tdewolff/minify/v2/js"
+
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/velox0/gatekeeper/internal/config"
@@ -25,6 +30,24 @@ var dummyHash = []byte("$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // maxBcryptPasswordLen is the maximum password length bcrypt supports.
 // Passwords longer than this are silently truncated by bcrypt, weakening security.
 const maxBcryptPasswordLen = 72
+
+var loginMinifier = newLoginMinifier()
+
+func newLoginMinifier() *minify.M {
+	m := minify.New()
+	m.AddFunc("text/html", minifyhtml.Minify)
+	m.AddFunc("text/css", minifycss.Minify)
+	m.AddFunc("application/javascript", minifyjs.Minify)
+	return m
+}
+
+func minifyLoginHTML(data []byte) ([]byte, error) {
+	var out bytes.Buffer
+	if err := loginMinifier.Minify("text/html", &out, bytes.NewReader(data)); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
 
 type Handler struct {
 	rc    *config.ResolvedConfig
@@ -67,8 +90,14 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
+		payload := buf.Bytes()
+		if minified, err := minifyLoginHTML(payload); err == nil {
+			payload = minified
+		} else {
+			log.Printf("warning: failed to minify login HTML: %v", err)
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if _, err := w.Write(buf.Bytes()); err != nil {
+		if _, err := w.Write(payload); err != nil {
 			return
 		}
 		return

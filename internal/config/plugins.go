@@ -1,11 +1,16 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
+
+	"github.com/tdewolff/minify/v2"
+	minifycss "github.com/tdewolff/minify/v2/css"
+	minifyjs "github.com/tdewolff/minify/v2/js"
 
 	"github.com/velox0/gatekeeper/internal/daemon"
 	"github.com/velox0/gatekeeper/internal/plugins"
@@ -364,6 +369,23 @@ func deletePlugin(cfgPath, pidPath, name string) {
 	fmt.Printf("Successfully deleted plugin %q\n", name)
 }
 
+var pluginMinifier = newPluginMinifier()
+
+func newPluginMinifier() *minify.M {
+	m := minify.New()
+	m.AddFunc("text/css", minifycss.Minify)
+	m.AddFunc("application/javascript", minifyjs.Minify)
+	return m
+}
+
+func minifyAsset(mimeType string, data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := pluginMinifier.Minify(mimeType, &buf, bytes.NewReader(data)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 func addPlugin(name, srcPath string) {
 	// 1. Resolve destination directory ~/.gatekeeper/<name>
 	pluginDir, err := plugins.PluginDir()
@@ -424,12 +446,23 @@ func addPlugin(name, srcPath string) {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", cssSrc, err)
 			os.Exit(1)
 		}
+		minified := false
+		if b, err := minifyAsset("text/css", data); err == nil {
+			data = b
+			minified = true
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: failed to minify CSS %s: %v\n", cssSrc, err)
+		}
 		destFile := filepath.Join(destDir, name+".css")
 		if err := os.WriteFile(destFile, data, 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "error writing %s: %v\n", destFile, err)
 			os.Exit(1)
 		}
-		fmt.Printf("Copied CSS to %s\n", destFile)
+		if minified {
+			fmt.Printf("Minified CSS to %s\n", destFile)
+		} else {
+			fmt.Printf("Copied CSS to %s\n", destFile)
+		}
 	}
 
 	if jsSrc != "" {
@@ -437,6 +470,11 @@ func addPlugin(name, srcPath string) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", jsSrc, err)
 			os.Exit(1)
+		}
+		if b, err := minifyAsset("application/javascript", data); err == nil {
+			data = b
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: failed to minify JS %s: %v\n", jsSrc, err)
 		}
 		destFile := filepath.Join(destDir, name+".js")
 		if err := os.WriteFile(destFile, data, 0644); err != nil {

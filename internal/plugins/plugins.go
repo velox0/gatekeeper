@@ -3,6 +3,7 @@
 package plugins
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"html/template"
@@ -11,12 +12,46 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tdewolff/minify/v2"
+	minifycss "github.com/tdewolff/minify/v2/css"
+	minifyjs "github.com/tdewolff/minify/v2/js"
 )
 
 //go:embed assets
 var defaultAssets embed.FS
 
 const gatekeeperDir = ".gatekeeper"
+
+var defaultMinifier = newDefaultMinifier()
+
+func newDefaultMinifier() *minify.M {
+	m := minify.New()
+	m.AddFunc("text/css", minifycss.Minify)
+	m.AddFunc("application/javascript", minifyjs.Minify)
+	return m
+}
+
+func minifyPluginAsset(path string, data []byte) ([]byte, bool, error) {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".css":
+		minified, err := minifyAssetBytes("text/css", data)
+		return minified, true, err
+	case ".js":
+		minified, err := minifyAssetBytes("application/javascript", data)
+		return minified, true, err
+	default:
+		return data, false, nil
+	}
+}
+
+func minifyAssetBytes(mimeType string, data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := defaultMinifier.Minify(mimeType, &buf, bytes.NewReader(data)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
 // PluginDir returns the resolved path to ~/.gatekeeper.
 func PluginDir() (string, error) {
@@ -63,6 +98,13 @@ func PopulateDefaults() error {
 		data, err := defaultAssets.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read embedded %s: %w", path, err)
+		}
+		if minified, attempted, err := minifyPluginAsset(path, data); attempted {
+			if err != nil {
+				log.Printf("warning: failed to minify embedded asset %s: %v", path, err)
+			} else {
+				data = minified
+			}
 		}
 
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
@@ -118,6 +160,13 @@ func UpdateDefaults(targetName string) error {
 		data, err := defaultAssets.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read embedded %s: %w", path, err)
+		}
+		if minified, attempted, err := minifyPluginAsset(path, data); attempted {
+			if err != nil {
+				log.Printf("warning: failed to minify embedded asset %s: %v", path, err)
+			} else {
+				data = minified
+			}
 		}
 
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
