@@ -37,7 +37,8 @@ type UserConfig struct {
 
 // SecurityConfig controls cookie security flags.
 type SecurityConfig struct {
-	SecureCookies bool `yaml:"secure_cookies"`
+	SecureCookies    bool `yaml:"secure_cookies"`
+	AuthorizeFavicon bool `yaml:"authorize_favicon"`
 }
 
 // ServerBlock defines a virtual host within a listener.

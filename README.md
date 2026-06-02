@@ -35,7 +35,7 @@ Gatekeeper merges global settings with listener/server-level configurations usin
 | `users`         | **Union**      | Both global and server-local users are authorized to log in. Local users shadow global users if usernames conflict.    |
 | `plugins`       | **Merge**      | Global plugins are active by default. Server-specific plugin maps can override individual plugins (enable/disable).    |
 | `auth`          | **Override**   | A server-level `auth` block overrides individual global fields (such as `cookie_name` and `session_ttl`).              |
-| `security`      | **Override**   | A server-level `security` block (e.g. `secure_cookies: true`) overrides the global settings.                           |
+| `security`      | **Override**   | A server-level `security` block (e.g. `secure_cookies: true`, `authorize_favicon: true`) overrides the global settings. |
 | `upstream`      | **Required**   | Configured per server block. Defines the backend destination URL (e.g. `http://localhost:3000`).                       |
 
 ---
@@ -81,6 +81,7 @@ cookie_name: gatekeeper_session
 session_ttl: 24h0m0s
 security:
 secure_cookies: false
+authorize_favicon: false # if true, unauthenticated GET /favicon.ico is proxied upstream
 users:
 - username: global-admin
  password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K # bcrypt hash for "test"

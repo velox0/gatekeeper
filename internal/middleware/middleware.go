@@ -7,12 +7,15 @@ import (
 	"github.com/velox0/gatekeeper/internal/session"
 )
 
-
 // RequireAuth wraps a handler and enforces session cookie presence and validity.
 func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store *session.InMemoryStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// paths that don't require auth
 		if r.URL.Path == "/login" || r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.Method == http.MethodGet && r.URL.Path == "/favicon.ico" && rc.GetAuthorizeFavicon() {
 			next.ServeHTTP(w, r)
 			return
 		}
