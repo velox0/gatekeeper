@@ -14,6 +14,7 @@ auth:
   session_ttl: 24h0m0s
 security:
   secure_cookies: false
+  authorize_favicon: false
 users: []
 plugins:
   aurora: false

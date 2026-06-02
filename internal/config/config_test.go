@@ -39,6 +39,9 @@ listeners:
 	if cfg.Auth.SessionTTL != 24*time.Hour {
 		t.Fatalf("SessionTTL = %v, want 24h", cfg.Auth.SessionTTL)
 	}
+	if cfg.Security.AuthorizeFavicon {
+		t.Fatal("AuthorizeFavicon = true, want false by default")
+	}
 }
 
 func TestLoadConfigParsesDuration(t *testing.T) {
@@ -58,6 +61,25 @@ listeners:
 
 	if cfg.Auth.SessionTTL != 30*time.Minute {
 		t.Fatalf("SessionTTL = %v, want 30m", cfg.Auth.SessionTTL)
+	}
+}
+
+func TestLoadConfigParsesAuthorizeFavicon(t *testing.T) {
+	cfg, err := LoadConfig(writeConfig(t, `
+security:
+  authorize_favicon: true
+listeners:
+  - listen: ":8080"
+    servers:
+      - server_name: app.local
+        upstream:
+          target: "http://localhost:3000"
+`))
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+	if !cfg.Security.AuthorizeFavicon {
+		t.Fatal("AuthorizeFavicon = false, want true")
 	}
 }
 

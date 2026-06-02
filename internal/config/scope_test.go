@@ -102,14 +102,14 @@ func TestResolveServerAuthOverride(t *testing.T) {
 func TestResolveServerSecurityOverride(t *testing.T) {
 	cfg := &Config{
 		Auth:     AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
-		Security: SecurityConfig{SecureCookies: false},
+		Security: SecurityConfig{SecureCookies: false, AuthorizeFavicon: false},
 	}
 
 	ln := ListenerConfig{Listen: ":8080"}
 	srv := ServerBlock{
 		ServerName: "app.local",
 		Upstream:   UpstreamConfig{Target: "http://localhost:3000"},
-		Security:   &SecurityConfig{SecureCookies: true},
+		Security:   &SecurityConfig{SecureCookies: true, AuthorizeFavicon: true},
 	}
 
 	rc := cfg.ResolveServer(ln, srv)
@@ -117,12 +117,15 @@ func TestResolveServerSecurityOverride(t *testing.T) {
 	if !rc.Security.SecureCookies {
 		t.Error("SecureCookies should be true (server override)")
 	}
+	if !rc.Security.AuthorizeFavicon {
+		t.Error("AuthorizeFavicon should be true (server override)")
+	}
 }
 
 func TestResolveServerInheritsGlobalDefaults(t *testing.T) {
 	cfg := &Config{
 		Auth:     AuthConfig{CookieName: "gk_global", SessionTTL: 12 * time.Hour},
-		Security: SecurityConfig{SecureCookies: true},
+		Security: SecurityConfig{SecureCookies: true, AuthorizeFavicon: false},
 		Users:    []UserConfig{{Username: "admin", PasswordHash: "hash"}},
 		Plugins:  map[string]bool{"hearts": true},
 	}
@@ -141,6 +144,9 @@ func TestResolveServerInheritsGlobalDefaults(t *testing.T) {
 	}
 	if !rc.Security.SecureCookies {
 		t.Error("SecureCookies should be true (inherited)")
+	}
+	if rc.Security.AuthorizeFavicon {
+		t.Error("AuthorizeFavicon should be false (inherited)")
 	}
 	if len(rc.Users) != 1 || rc.Users[0].Username != "admin" {
 		t.Errorf("Users = %v, want [admin]", rc.Users)

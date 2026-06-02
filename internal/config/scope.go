@@ -71,6 +71,13 @@ func (rc *ResolvedConfig) GetSecureCookies() bool {
 	return rc.Security.SecureCookies
 }
 
+// GetAuthorizeFavicon returns whether GET /favicon.ico can bypass auth.
+func (rc *ResolvedConfig) GetAuthorizeFavicon() bool {
+	rc.rlock()
+	defer rc.runlock()
+	return rc.Security.AuthorizeFavicon
+}
+
 // Update updates all fields of the ResolvedConfig thread-safely.
 func (rc *ResolvedConfig) Update(fresh ResolvedConfig) {
 	rc.lock()

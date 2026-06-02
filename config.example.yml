@@ -5,6 +5,7 @@ auth:
     session_ttl: 24h0m0s
 security:
     secure_cookies: false
+    authorize_favicon: false
 users:
     - username: test
       password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K

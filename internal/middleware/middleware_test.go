@@ -108,3 +108,57 @@ func TestRequireAuthSkipsLoginAndHealthPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestRequireAuthAllowsFaviconGetWhenAuthorized(t *testing.T) {
+	rc := &config.ResolvedConfig{
+		Auth:     config.AuthConfig{CookieName: "sid"},
+		Security: config.SecurityConfig{AuthorizeFavicon: true},
+	}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}), rc, store)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/favicon.ico", nil))
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
+	}
+}
+
+func TestRequireAuthDoesNotAllowFaviconGetWhenUnauthorized(t *testing.T) {
+	rc := &config.ResolvedConfig{
+		Auth:     config.AuthConfig{CookieName: "sid"},
+		Security: config.SecurityConfig{AuthorizeFavicon: false},
+	}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}), rc, store)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/favicon.ico", nil))
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
+	}
+}
+
+func TestRequireAuthDoesNotAllowFaviconNonGet(t *testing.T) {
+	rc := &config.ResolvedConfig{
+		Auth:     config.AuthConfig{CookieName: "sid"},
+		Security: config.SecurityConfig{AuthorizeFavicon: true},
+	}
+	store := session.NewInMemoryStore()
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}), rc, store)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/favicon.ico", nil))
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
+	}
+}
