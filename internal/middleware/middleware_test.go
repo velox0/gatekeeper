@@ -10,6 +10,11 @@ import (
 	"github.com/velox0/gatekeeper/internal/session"
 )
 
+func boolPtr(v bool) *bool {
+	b := v
+	return &b
+}
+
 func TestRequireAuthRedirectsMissingSession(t *testing.T) {
 	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
 	store := session.NewInMemoryStore()
@@ -112,7 +117,7 @@ func TestRequireAuthSkipsLoginAndHealthPaths(t *testing.T) {
 func TestRequireAuthAllowsFaviconGetWhenAuthorized(t *testing.T) {
 	rc := &config.ResolvedConfig{
 		Auth:     config.AuthConfig{CookieName: "sid"},
-		Security: config.SecurityConfig{AuthorizeFavicon: true},
+		Security: config.SecurityConfig{AuthorizeFavicon: boolPtr(true)},
 	}
 	store := session.NewInMemoryStore()
 	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +135,7 @@ func TestRequireAuthAllowsFaviconGetWhenAuthorized(t *testing.T) {
 func TestRequireAuthDoesNotAllowFaviconGetWhenUnauthorized(t *testing.T) {
 	rc := &config.ResolvedConfig{
 		Auth:     config.AuthConfig{CookieName: "sid"},
-		Security: config.SecurityConfig{AuthorizeFavicon: false},
+		Security: config.SecurityConfig{AuthorizeFavicon: boolPtr(false)},
 	}
 	store := session.NewInMemoryStore()
 	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +153,7 @@ func TestRequireAuthDoesNotAllowFaviconGetWhenUnauthorized(t *testing.T) {
 func TestRequireAuthDoesNotAllowFaviconNonGet(t *testing.T) {
 	rc := &config.ResolvedConfig{
 		Auth:     config.AuthConfig{CookieName: "sid"},
-		Security: config.SecurityConfig{AuthorizeFavicon: true},
+		Security: config.SecurityConfig{AuthorizeFavicon: boolPtr(true)},
 	}
 	store := session.NewInMemoryStore()
 	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

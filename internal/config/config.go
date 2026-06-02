@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 )
 
 const defaultAppName = "Gatekeeper"
+const defaultSameSite = "strict"
 
 // DefaultConfigPath is the conventional system-wide config location.
 const DefaultConfigPath = "/etc/gatekeeper/gatekeeper.config"
@@ -37,8 +39,9 @@ type UserConfig struct {
 
 // SecurityConfig controls cookie security flags.
 type SecurityConfig struct {
-	SecureCookies    bool `yaml:"secure_cookies"`
-	AuthorizeFavicon bool `yaml:"authorize_favicon"`
+	SecureCookies    *bool  `yaml:"secure_cookies,omitempty"`
+	SameSite         string `yaml:"same_site,omitempty"`
+	AuthorizeFavicon *bool  `yaml:"authorize_favicon,omitempty"`
 }
 
 // ServerBlock defines a virtual host within a listener.
@@ -67,6 +70,54 @@ type Config struct {
 	Users     []UserConfig     `yaml:"users,omitempty"`
 	Plugins   map[string]bool  `yaml:"plugins,omitempty"`
 	Listeners []ListenerConfig `yaml:"listeners"`
+}
+
+func boolPtr(v bool) *bool {
+	b := v
+	return &b
+}
+
+func secureCookiesOrDefault(value *bool) bool {
+	if value == nil {
+		return true
+	}
+	return *value
+}
+
+func authorizeFaviconOrDefault(value *bool) bool {
+	if value == nil {
+		return false
+	}
+	return *value
+}
+
+func normalizeSameSite(value string) (string, error) {
+	clean := strings.ToLower(strings.TrimSpace(value))
+	if clean == "" {
+		return defaultSameSite, nil
+	}
+	switch clean {
+	case "strict", "lax", "none":
+		return clean, nil
+	default:
+		return "", fmt.Errorf("invalid same_site %q (valid: strict, lax, none)", value)
+	}
+}
+
+func mergeSecurity(base SecurityConfig, override *SecurityConfig) SecurityConfig {
+	if override == nil {
+		return base
+	}
+	if override.SecureCookies != nil {
+		base.SecureCookies = override.SecureCookies
+	}
+	if override.SameSite != "" {
+		base.SameSite = override.SameSite
+	}
+	if override.AuthorizeFavicon != nil {
+		base.AuthorizeFavicon = override.AuthorizeFavicon
+	}
+	return base
 }
 
 // DisplayName returns AppName if set, or the default "Gatekeeper".
@@ -142,16 +193,9 @@ func ResolveConfigPath(fallbackPath, pidPath string) string {
 // Reload re-reads the config file from disk and swaps all mutable state
 // (users, plugins) at both global and server-block level.
 func (c *Config) Reload(path string) error {
-	if err := ensureConfigFileSecure(path); err != nil {
-		return fmt.Errorf("reload: config file security check failed: %w", err)
-	}
-	b, err := os.ReadFile(path)
+	fresh, err := LoadConfig(path)
 	if err != nil {
-		return fmt.Errorf("reload: failed to read config: %w", err)
-	}
-	var fresh Config
-	if err := yaml.Unmarshal(b, &fresh); err != nil {
-		return fmt.Errorf("reload: failed to parse config: %w", err)
+		return fmt.Errorf("reload: %w", err)
 	}
 	c.mu.Lock()
 	c.AppName = fresh.AppName
@@ -284,6 +328,17 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.Auth.SessionTTL == 0 {
 		cfg.Auth.SessionTTL = 24 * time.Hour
 	}
+	if cfg.Security.SecureCookies == nil {
+		cfg.Security.SecureCookies = boolPtr(true)
+	}
+	if cfg.Security.AuthorizeFavicon == nil {
+		cfg.Security.AuthorizeFavicon = boolPtr(false)
+	}
+	if normalized, err := normalizeSameSite(cfg.Security.SameSite); err != nil {
+		return nil, err
+	} else {
+		cfg.Security.SameSite = normalized
+	}
 	if err := validateConfig(&cfg); err != nil {
 		return nil, err
 	}
@@ -294,6 +349,10 @@ func LoadConfig(path string) (*Config, error) {
 func validateConfig(cfg *Config) error {
 	if len(cfg.Listeners) == 0 {
 		return fmt.Errorf("at least one listener is required")
+	}
+
+	if err := validateSecurity(cfg.Security, "security"); err != nil {
+		return err
 	}
 
 	listenAddrs := make(map[string]bool)
@@ -332,6 +391,19 @@ func validateConfig(cfg *Config) error {
 			if err := validateUpstream(srv.Upstream, fmt.Sprintf("listener[%d] (%s) server[%d] (%s)", li, ln.Listen, si, displayName)); err != nil {
 				return err
 			}
+
+			if srv.Security != nil && srv.Security.SameSite != "" {
+				normalized, err := normalizeSameSite(srv.Security.SameSite)
+				if err != nil {
+					return fmt.Errorf("listener[%d] (%s) server[%d] (%s): %w", li, ln.Listen, si, displayName, err)
+				}
+				srv.Security.SameSite = normalized
+			}
+
+			effectiveSecurity := mergeSecurity(cfg.Security, srv.Security)
+			if err := validateSecurity(effectiveSecurity, fmt.Sprintf("listener[%d] (%s) server[%d] (%s) security", li, ln.Listen, si, displayName)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -350,6 +422,17 @@ func validateUpstream(up UpstreamConfig, ctx string) error {
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return fmt.Errorf("%s: upstream target must use http or https", ctx)
+	}
+	return nil
+}
+
+func validateSecurity(sec SecurityConfig, ctx string) error {
+	normalized, err := normalizeSameSite(sec.SameSite)
+	if err != nil {
+		return fmt.Errorf("%s: %w", ctx, err)
+	}
+	if normalized == "none" && !secureCookiesOrDefault(sec.SecureCookies) {
+		return fmt.Errorf("%s: same_site \"none\" requires secure_cookies=true", ctx)
 	}
 	return nil
 }

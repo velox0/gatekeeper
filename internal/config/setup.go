@@ -13,7 +13,8 @@ auth:
   cookie_name: gatekeeper_session
   session_ttl: 24h0m0s
 security:
-  secure_cookies: false
+  secure_cookies: true
+  same_site: strict
   authorize_favicon: false
 users: []
 plugins:

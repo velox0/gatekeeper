@@ -147,7 +147,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   h.rc.GetSecureCookies(),
-			SameSite: http.SameSiteLaxMode,
+			SameSite: h.rc.GetSameSite(),
 			Expires:  sess.ExpiresAt,
 		}
 		http.SetCookie(w, cookie)
@@ -178,7 +178,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 			MaxAge:   -1,
 			HttpOnly: true,
 			Secure:   h.rc.GetSecureCookies(),
-			SameSite: http.SameSiteLaxMode,
+			SameSite: h.rc.GetSameSite(),
 		})
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -56,7 +56,10 @@ func TestLoginGetRendersForm(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want text/html; charset=utf-8", got)
 	}
-	if !strings.Contains(rec.Body.String(), `action="/login"`) {
+	body := rec.Body.String()
+	if !strings.Contains(body, `action="/login"`) &&
+		!strings.Contains(body, `action='/login'`) &&
+		!strings.Contains(body, `action=/login`) {
 		t.Fatalf("login response did not include the login form")
 	}
 }

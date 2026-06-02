@@ -102,30 +102,50 @@ func TestResolveServerAuthOverride(t *testing.T) {
 func TestResolveServerSecurityOverride(t *testing.T) {
 	cfg := &Config{
 		Auth:     AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
-		Security: SecurityConfig{SecureCookies: false, AuthorizeFavicon: false},
+		Security: SecurityConfig{SecureCookies: boolPtr(false), AuthorizeFavicon: boolPtr(false)},
 	}
 
 	ln := ListenerConfig{Listen: ":8080"}
 	srv := ServerBlock{
 		ServerName: "app.local",
 		Upstream:   UpstreamConfig{Target: "http://localhost:3000"},
-		Security:   &SecurityConfig{SecureCookies: true, AuthorizeFavicon: true},
+		Security:   &SecurityConfig{SecureCookies: boolPtr(true), AuthorizeFavicon: boolPtr(true)},
 	}
 
 	rc := cfg.ResolveServer(ln, srv)
 
-	if !rc.Security.SecureCookies {
+	if !secureCookiesOrDefault(rc.Security.SecureCookies) {
 		t.Error("SecureCookies should be true (server override)")
 	}
-	if !rc.Security.AuthorizeFavicon {
+	if !rc.GetAuthorizeFavicon() {
 		t.Error("AuthorizeFavicon should be true (server override)")
+	}
+}
+
+func TestResolveServerSecurityCanDisableGlobalFavicon(t *testing.T) {
+	cfg := &Config{
+		Auth:     AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
+		Security: SecurityConfig{AuthorizeFavicon: boolPtr(true)},
+	}
+
+	ln := ListenerConfig{Listen: ":8080"}
+	srv := ServerBlock{
+		ServerName: "app.local",
+		Upstream:   UpstreamConfig{Target: "http://localhost:3000"},
+		Security:   &SecurityConfig{AuthorizeFavicon: boolPtr(false)},
+	}
+
+	rc := cfg.ResolveServer(ln, srv)
+
+	if rc.GetAuthorizeFavicon() {
+		t.Error("AuthorizeFavicon should be false (server override)")
 	}
 }
 
 func TestResolveServerInheritsGlobalDefaults(t *testing.T) {
 	cfg := &Config{
 		Auth:     AuthConfig{CookieName: "gk_global", SessionTTL: 12 * time.Hour},
-		Security: SecurityConfig{SecureCookies: true, AuthorizeFavicon: false},
+		Security: SecurityConfig{SecureCookies: boolPtr(true), AuthorizeFavicon: boolPtr(false)},
 		Users:    []UserConfig{{Username: "admin", PasswordHash: "hash"}},
 		Plugins:  map[string]bool{"hearts": true},
 	}
@@ -142,10 +162,10 @@ func TestResolveServerInheritsGlobalDefaults(t *testing.T) {
 	if rc.Auth.CookieName != "gk_global" {
 		t.Errorf("CookieName = %q, want gk_global", rc.Auth.CookieName)
 	}
-	if !rc.Security.SecureCookies {
+	if !secureCookiesOrDefault(rc.Security.SecureCookies) {
 		t.Error("SecureCookies should be true (inherited)")
 	}
-	if rc.Security.AuthorizeFavicon {
+	if rc.GetAuthorizeFavicon() {
 		t.Error("AuthorizeFavicon should be false (inherited)")
 	}
 	if len(rc.Users) != 1 || rc.Users[0].Username != "admin" {

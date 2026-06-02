@@ -1,6 +1,8 @@
 package config
 
 import (
+	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -68,14 +70,32 @@ func (rc *ResolvedConfig) GetSessionTTL() time.Duration {
 func (rc *ResolvedConfig) GetSecureCookies() bool {
 	rc.rlock()
 	defer rc.runlock()
-	return rc.Security.SecureCookies
+	return secureCookiesOrDefault(rc.Security.SecureCookies)
+}
+
+// GetSameSite returns the effective SameSite policy for the session cookie.
+func (rc *ResolvedConfig) GetSameSite() http.SameSite {
+	rc.rlock()
+	defer rc.runlock()
+	value := strings.ToLower(strings.TrimSpace(rc.Security.SameSite))
+	if value == "" {
+		value = defaultSameSite
+	}
+	switch value {
+	case "none":
+		return http.SameSiteNoneMode
+	case "lax":
+		return http.SameSiteLaxMode
+	default:
+		return http.SameSiteStrictMode
+	}
 }
 
 // GetAuthorizeFavicon returns whether GET /favicon.ico can bypass auth.
 func (rc *ResolvedConfig) GetAuthorizeFavicon() bool {
 	rc.rlock()
 	defer rc.runlock()
-	return rc.Security.AuthorizeFavicon
+	return authorizeFaviconOrDefault(rc.Security.AuthorizeFavicon)
 }
 
 // Update updates all fields of the ResolvedConfig thread-safely.
@@ -129,10 +149,7 @@ func (c *Config) ResolveServer(ln ListenerConfig, srv ServerBlock) ResolvedConfi
 	}
 
 	// --- Security: start with global, override with server-level ---
-	rc.Security = c.Security
-	if srv.Security != nil {
-		rc.Security = *srv.Security
-	}
+	rc.Security = mergeSecurity(c.Security, srv.Security)
 
 	// --- Users: union (global + local) ---
 	// Local users can shadow a global user with the same username.
