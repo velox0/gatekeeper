@@ -23,6 +23,7 @@ Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authen
 - **Graceful Shutdown**: Stops accepting new connections and finishes processing active requests before exiting.
 - **Built-in 5xx Pages**: Returns branded HTML error pages for internal failures, unavailable upstreams, and upstream timeouts.
 - **Structured Access Logs**: Optionally persists one JSON record per request, including status, size, latency, client address, and authenticated user.
+- **Persistent Error Logs**: Optionally duplicates operational and proxy errors to a restricted append-only file while retaining console output.
 
 ---
 
@@ -200,6 +201,14 @@ Set `GATEKEEPER_ACCESS_LOG` to a file path to append structured JSON access logs
 
 ```bash
 GATEKEEPER_ACCESS_LOG=/var/log/gatekeeper/access.log gatekeeper -config /etc/gatekeeper/config.yml
+```
+
+### Error Logs
+
+Set `GATEKEEPER_ERROR_LOG` to a file path to append runtime and proxy errors while continuing to emit them to standard error.
+
+```bash
+GATEKEEPER_ERROR_LOG=/var/log/gatekeeper/error.log gatekeeper -config /etc/gatekeeper/config.yml
 ```
 
 Gatekeeper writes its process ID (PID) to a file on startup.

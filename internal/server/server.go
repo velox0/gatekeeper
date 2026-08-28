@@ -18,6 +18,7 @@ import (
 	"github.com/velox0/gatekeeper/internal/accesslog"
 	"github.com/velox0/gatekeeper/internal/auth"
 	"github.com/velox0/gatekeeper/internal/config"
+	"github.com/velox0/gatekeeper/internal/errorlog"
 	"github.com/velox0/gatekeeper/internal/middleware"
 	"github.com/velox0/gatekeeper/internal/plugins"
 	"github.com/velox0/gatekeeper/internal/proxy"
@@ -72,6 +73,7 @@ type Gateway struct {
 	mu           sync.Mutex
 	reaperCancel context.CancelFunc
 	accessLog    *accesslog.Logger
+	errorLog     *errorlog.Sink
 }
 
 // NewGateway constructs a Gateway from the loaded config.
@@ -80,9 +82,16 @@ type Gateway struct {
 func NewGateway(cfg *config.Config) (*Gateway, error) {
 	reaperCtx, reaperCancel := context.WithCancel(context.Background())
 	gw := &Gateway{cfg: cfg, reaperCancel: reaperCancel}
+	errorLogger, err := errorlog.OpenFromEnv()
+	if err != nil {
+		reaperCancel()
+		return nil, err
+	}
+	gw.errorLog = errorLogger
 	accessLogger, err := accesslog.OpenFromEnv()
 	if err != nil {
 		reaperCancel()
+		_ = errorLogger.Close()
 		return nil, err
 	}
 	gw.accessLog = accessLogger
@@ -98,6 +107,7 @@ func NewGateway(cfg *config.Config) (*Gateway, error) {
 		if err != nil {
 			reaperCancel()
 			_ = accessLogger.Close()
+			_ = errorLogger.Close()
 			return nil, fmt.Errorf("listener %s: %w", lnCfg.Listen, err)
 		}
 		if accessLogger != nil {
@@ -300,6 +310,9 @@ func (gw *Gateway) Shutdown(ctx context.Context) error {
 	gw.reaperCancel()
 	if err := gw.accessLog.Close(); err != nil {
 		errs = append(errs, fmt.Errorf("close access log: %w", err))
+	}
+	if err := gw.errorLog.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("close error log: %w", err))
 	}
 	return errors.Join(errs...)
 }
