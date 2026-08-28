@@ -20,6 +20,7 @@ const Version = "0.1.6"
 func main() {
 	cfgPath := flag.String("config", "/etc/gatekeeper/config.yml", "path to config yaml")
 	pidPath := flag.String("pid", daemon.DefaultPIDPath, "path to PID file")
+	debug := flag.Bool("debug", false, "disable secure cookies and relax same-site policy for local development")
 	flag.Usage = printGeneralHelp
 	flag.Parse()
 
@@ -58,6 +59,13 @@ func main() {
 	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
+	}
+
+	if *debug {
+		off := false
+		cfg.SetSecureCookies(&off)
+		cfg.SetSameSite("lax")
+		fmt.Fprintln(os.Stderr, "warning: debug mode — secure_cookies=false, same_site=lax")
 	}
 
 	// Write PID file
@@ -130,6 +138,7 @@ func printGeneralHelp() {
 	fmt.Println("Flags:")
 	fmt.Println("  -config string   path to config yaml (default \"/etc/gatekeeper/config.yml\")")
 	fmt.Println("  -pid string      path to PID file (default \"/var/run/gatekeeper.pid\")")
+	fmt.Println("  -debug           disable secure cookies & relax same-site for local dev")
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  user    Run 'gatekeeper user help' for user management commands")

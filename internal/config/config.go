@@ -160,6 +160,20 @@ func (c *Config) GetPlugins() map[string]bool {
 	return out
 }
 
+// SetSecureCookies overrides the global secure_cookies setting.
+func (c *Config) SetSecureCookies(v *bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Security.SecureCookies = v
+}
+
+// SetSameSite overrides the global same_site setting.
+func (c *Config) SetSameSite(v string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Security.SameSite = v
+}
+
 // ResolveConfigPath returns the active daemon config path when available,
 // otherwise it falls back to the supplied path.
 func ResolveConfigPath(fallbackPath, pidPath string) string {
