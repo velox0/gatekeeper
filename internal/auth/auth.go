@@ -18,6 +18,7 @@ import (
 	"github.com/velox0/gatekeeper/internal/config"
 	"github.com/velox0/gatekeeper/internal/plugins"
 	"github.com/velox0/gatekeeper/internal/session"
+	"github.com/velox0/gatekeeper/internal/statuspage"
 )
 
 //go:embed login.html
@@ -96,7 +97,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		var buf bytes.Buffer
 		if err := h.tmpl.Execute(&buf, data); err != nil {
 			log.Printf("template error: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			statuspage.Write(w, http.StatusInternalServerError, h.rc.GetAppName())
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -137,7 +138,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		sess, err := h.store.Create(username, h.rc.GetSessionTTL())
 		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			statuspage.Write(w, http.StatusInternalServerError, h.rc.GetAppName())
 			return
 		}
 

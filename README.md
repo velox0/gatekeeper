@@ -21,6 +21,7 @@ Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authen
 - **Comment-Preserving Config Saves**: Managing configuration settings programmatically via the CLI preserves existing file layout, spacing, and comments.
 - **Zero-Downtime Reloads**: Reload the server configuration seamlessly without dropping active connections by sending a `SIGHUP` signal.
 - **Graceful Shutdown**: Stops accepting new connections and finishes processing active requests before exiting.
+- **Built-in 5xx Pages**: Returns branded HTML error pages for internal failures, unavailable upstreams, and upstream timeouts.
 
 ---
 

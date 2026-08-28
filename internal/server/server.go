@@ -120,7 +120,7 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 			return nil, fmt.Errorf("server %s: invalid upstream: %w", displayName, err)
 		}
 
-		rev := proxy.NewReverseProxy(upstreamURL)
+		rev := proxy.NewReverseProxy(upstreamURL, rc.GetAppName)
 		sessStore := session.NewInMemoryStore()
 
 		mux := http.NewServeMux()
