@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/velox0/gatekeeper/internal/accesslog"
 	"github.com/velox0/gatekeeper/internal/auth"
 	"github.com/velox0/gatekeeper/internal/config"
 	"github.com/velox0/gatekeeper/internal/middleware"
@@ -70,6 +71,7 @@ type Gateway struct {
 	cfg          *config.Config
 	mu           sync.Mutex
 	reaperCancel context.CancelFunc
+	accessLog    *accesslog.Logger
 }
 
 // NewGateway constructs a Gateway from the loaded config.
@@ -78,6 +80,12 @@ type Gateway struct {
 func NewGateway(cfg *config.Config) (*Gateway, error) {
 	reaperCtx, reaperCancel := context.WithCancel(context.Background())
 	gw := &Gateway{cfg: cfg, reaperCancel: reaperCancel}
+	accessLogger, err := accesslog.OpenFromEnv()
+	if err != nil {
+		reaperCancel()
+		return nil, err
+	}
+	gw.accessLog = accessLogger
 
 	if err := plugins.PopulateDefaults(); err != nil {
 		log.Printf("warning: failed to seed plugin assets: %v", err)
@@ -89,7 +97,11 @@ func NewGateway(cfg *config.Config) (*Gateway, error) {
 		ln, err := buildListener(cfg, lnCfg)
 		if err != nil {
 			reaperCancel()
+			_ = accessLogger.Close()
 			return nil, fmt.Errorf("listener %s: %w", lnCfg.Listen, err)
+		}
+		if accessLogger != nil {
+			ln.Server.Handler = accessLogger.Wrap(ln)
 		}
 		// Start session reapers for each virtual host.
 		for _, vhost := range ln.Hosts {
@@ -286,6 +298,9 @@ func (gw *Gateway) Shutdown(ctx context.Context) error {
 
 	wg.Wait()
 	gw.reaperCancel()
+	if err := gw.accessLog.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("close access log: %w", err))
+	}
 	return errors.Join(errs...)
 }
 
