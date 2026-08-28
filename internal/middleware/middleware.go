@@ -8,7 +8,7 @@ import (
 )
 
 // RequireAuth wraps a handler and enforces session cookie presence and validity.
-func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store *session.InMemoryStore) http.Handler {
+func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store session.Store) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// paths that don't require auth
 		if r.URL.Path == "/login" || r.URL.Path == "/health" {

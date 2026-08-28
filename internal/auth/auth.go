@@ -52,7 +52,7 @@ func minifyLoginHTML(data []byte) ([]byte, error) {
 
 type Handler struct {
 	rc    *config.ResolvedConfig
-	store *session.InMemoryStore
+	store session.Store
 	tmpl  *template.Template
 }
 
@@ -63,7 +63,7 @@ type loginData struct {
 	Plugins []plugins.LoadedPlugin
 }
 
-func NewHandler(rc *config.ResolvedConfig, store *session.InMemoryStore) (*Handler, error) {
+func NewHandler(rc *config.ResolvedConfig, store session.Store) (*Handler, error) {
 	data, err := loginPage.ReadFile("login.html")
 	if err != nil {
 		return nil, err

@@ -24,6 +24,7 @@ Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authen
 - **Built-in 5xx Pages**: Returns branded HTML error pages for internal failures, unavailable upstreams, and upstream timeouts.
 - **Structured Access Logs**: Optionally persists one JSON record per request, including status, size, latency, client address, and authenticated user.
 - **Persistent Error Logs**: Optionally duplicates operational and proxy errors to a restricted append-only file while retaining console output.
+- **Persistent Sessions**: Optionally stores isolated virtual-host sessions on disk with atomic writes and restrictive permissions so logins survive restarts.
 
 ---
 
@@ -209,6 +210,14 @@ Set `GATEKEEPER_ERROR_LOG` to a file path to append runtime and proxy errors whi
 
 ```bash
 GATEKEEPER_ERROR_LOG=/var/log/gatekeeper/error.log gatekeeper -config /etc/gatekeeper/config.yml
+```
+
+### Persistent Sessions
+
+Set `GATEKEEPER_SESSION_DIR` to a private directory to persist sessions across restarts. Gatekeeper creates one mode-`0600` session file per virtual host and restricts the directory to mode `0700`. Leave it unset to keep sessions in memory only.
+
+```bash
+GATEKEEPER_SESSION_DIR=/var/lib/gatekeeper/sessions gatekeeper -config /etc/gatekeeper/config.yml
 ```
 
 Gatekeeper writes its process ID (PID) to a file on startup.

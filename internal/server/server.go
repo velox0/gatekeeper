@@ -32,7 +32,7 @@ type VirtualHost struct {
 	Mux       *http.ServeMux
 	Proxy     *httputil.ReverseProxy
 	Auth      *auth.Handler
-	SessStore *session.InMemoryStore
+	SessStore session.Store
 }
 
 // Listener binds a listen address to a set of virtual hosts keyed by server_name.
@@ -143,7 +143,10 @@ func buildListener(cfg *config.Config, lnCfg config.ListenerConfig) (*Listener, 
 		}
 
 		rev := proxy.NewReverseProxy(upstreamURL, rc.GetAppName)
-		sessStore := session.NewInMemoryStore()
+		sessStore, err := session.NewStoreFromEnv(lnCfg.Listen + "\x00" + strings.ToLower(srvCfg.ServerName))
+		if err != nil {
+			return nil, fmt.Errorf("server %s: session store: %w", displayName, err)
+		}
 
 		mux := http.NewServeMux()
 

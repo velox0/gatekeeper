@@ -16,6 +16,15 @@ type Session struct {
 	ExpiresAt time.Time
 }
 
+// Store is the session storage contract used by authentication middleware.
+type Store interface {
+	Create(user string, ttl time.Duration) (*Session, error)
+	Get(id string) (*Session, bool)
+	Delete(id string)
+	Reap() int
+	StartReaper(ctx context.Context, interval time.Duration)
+}
+
 type InMemoryStore struct {
 	mu       sync.RWMutex
 	sessions map[string]*Session
@@ -108,4 +117,3 @@ func (s *InMemoryStore) StartReaper(ctx context.Context, interval time.Duration)
 		}
 	}()
 }
-
