@@ -162,8 +162,8 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		w.Header().Set("Allow", "GET, POST")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -181,6 +181,10 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 			Secure:   h.rc.GetSecureCookies(),
 			SameSite: h.rc.GetSameSite(),
 		})
+	}
+	if r.Method == http.MethodGet {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -163,6 +164,55 @@ func TestLogoutClearsSessionAndCookie(t *testing.T) {
 	cookie := findCookie(t, rec.Result().Cookies(), "sid")
 	if cookie.MaxAge != -1 {
 		t.Fatalf("cookie MaxAge = %d, want -1", cookie.MaxAge)
+	}
+}
+
+func TestLogoutGetClearsSessionAndRedirects(t *testing.T) {
+	for _, withSession := range []bool{true, false} {
+		t.Run(fmt.Sprintf("withSession=%t", withSession), func(t *testing.T) {
+			handler, store := newTestHandler(t)
+			req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+			var sessionID string
+			if withSession {
+				sess, err := store.Create("admin", time.Hour)
+				if err != nil {
+					t.Fatal(err)
+				}
+				sessionID = sess.ID
+				req.AddCookie(&http.Cookie{Name: "sid", Value: sessionID})
+			}
+			rec := httptest.NewRecorder()
+			handler.LogoutHandler(rec, req)
+			if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/login" {
+				t.Fatalf("response = %d, Location %q; want 303, /login", rec.Code, rec.Header().Get("Location"))
+			}
+			if withSession {
+				if _, ok := store.Get(sessionID); ok {
+					t.Fatal("session remains valid after GET logout")
+				}
+				if cookie := findCookie(t, rec.Result().Cookies(), "sid"); cookie.MaxAge != -1 {
+					t.Fatalf("cookie MaxAge = %d, want -1", cookie.MaxAge)
+				}
+			}
+		})
+	}
+}
+
+func TestLogoutRejectsUnsupportedMethod(t *testing.T) {
+	handler, store := newTestHandler(t)
+	sess, err := store.Create("admin", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodDelete, "/logout", nil)
+	req.AddCookie(&http.Cookie{Name: "sid", Value: sess.ID})
+	rec := httptest.NewRecorder()
+	handler.LogoutHandler(rec, req)
+	if rec.Code != http.StatusMethodNotAllowed || rec.Header().Get("Allow") != "GET, POST" {
+		t.Fatalf("response = %d, Allow %q; want 405, GET, POST", rec.Code, rec.Header().Get("Allow"))
+	}
+	if _, ok := store.Get(sess.ID); !ok {
+		t.Fatal("unsupported method deleted the session")
 	}
 }
 
