@@ -34,9 +34,12 @@ func TestRequireAuthRedirectsMissingSession(t *testing.T) {
 }
 
 func TestRequireAuthAddsUpstreamHeaders(t *testing.T) {
-	rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}}
+	rc := &config.ResolvedConfig{
+		Auth:  config.AuthConfig{CookieName: "sid"},
+		Users: []config.UserConfig{{Username: "admin", PasswordHash: "hash"}},
+	}
 	store := session.NewInMemoryStore()
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", config.CredentialFingerprint("hash"), time.Hour)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -59,6 +62,69 @@ func TestRequireAuthAddsUpstreamHeaders(t *testing.T) {
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
+	}
+}
+
+func TestRequireAuthRevokesStaleSessions(t *testing.T) {
+	cases := []struct {
+		name  string
+		users []config.UserConfig
+	}{
+		{name: "user removed"},
+		{name: "password changed", users: []config.UserConfig{{Username: "admin", PasswordHash: "new-hash"}}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rc := &config.ResolvedConfig{Auth: config.AuthConfig{CookieName: "sid"}, Users: tc.users}
+			store := session.NewInMemoryStore()
+			sess, err := store.Create("admin", config.CredentialFingerprint("old-hash"), time.Hour)
+			if err != nil {
+				t.Fatalf("Create returned error: %v", err)
+			}
+			handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Fatal("next handler should not be called")
+			}), rc, store)
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.AddCookie(&http.Cookie{Name: "sid", Value: sess.ID})
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusSeeOther {
+				t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
+			}
+			if location := rec.Header().Get("Location"); location != "/login" {
+				t.Fatalf("Location = %q, want /login", location)
+			}
+			if _, ok := store.Get(sess.ID); ok {
+				t.Fatal("stale session was not deleted")
+			}
+		})
+	}
+}
+
+func TestRequireAuthRejectsSessionWithoutCredential(t *testing.T) {
+	rc := &config.ResolvedConfig{
+		Auth:  config.AuthConfig{CookieName: "sid"},
+		Users: []config.UserConfig{{Username: "admin", PasswordHash: "hash"}},
+	}
+	store := session.NewInMemoryStore()
+	sess, err := store.Create("admin", "", time.Hour)
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	handler := RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}), rc, store)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: "sid", Value: sess.ID})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusSeeOther)
 	}
 }
 

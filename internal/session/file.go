@@ -63,13 +63,13 @@ func NewFileStore(path string) (*FileStore, error) {
 }
 
 // Create adds and persists a new session.
-func (s *FileStore) Create(user string, ttl time.Duration) (*Session, error) {
+func (s *FileStore) Create(user, credential string, ttl time.Duration) (*Session, error) {
 	id, err := genSessionID(32)
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now()
-	sess := &Session{ID: id, User: user, CreatedAt: now, ExpiresAt: now.Add(ttl)}
+	sess := &Session{ID: id, User: user, Credential: credential, CreatedAt: now, ExpiresAt: now.Add(ttl)}
 
 	s.mu.Lock()
 	s.sessions[id] = sess

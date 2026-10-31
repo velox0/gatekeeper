@@ -10,15 +10,16 @@ import (
 )
 
 type Session struct {
-	ID        string
-	User      string
-	CreatedAt time.Time
-	ExpiresAt time.Time
+	ID         string
+	User       string
+	Credential string // fingerprint of the password hash used to log in
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
 }
 
 // Store is the session storage contract used by authentication middleware.
 type Store interface {
-	Create(user string, ttl time.Duration) (*Session, error)
+	Create(user, credential string, ttl time.Duration) (*Session, error)
 	Get(id string) (*Session, bool)
 	Delete(id string)
 	Reap() int
@@ -42,17 +43,18 @@ func genSessionID(n int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-func (s *InMemoryStore) Create(user string, ttl time.Duration) (*Session, error) {
+func (s *InMemoryStore) Create(user, credential string, ttl time.Duration) (*Session, error) {
 	id, err := genSessionID(32)
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now()
 	sess := &Session{
-		ID:        id,
-		User:      user,
-		CreatedAt: now,
-		ExpiresAt: now.Add(ttl),
+		ID:         id,
+		User:       user,
+		Credential: credential,
+		CreatedAt:  now,
+		ExpiresAt:  now.Add(ttl),
 	}
 	s.mu.Lock()
 	s.sessions[id] = sess

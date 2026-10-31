@@ -220,6 +220,8 @@ Set `GATEKEEPER_SESSION_DIR` to a private directory to persist sessions across r
 GATEKEEPER_SESSION_DIR=/var/lib/gatekeeper/sessions gatekeeper -config /etc/gatekeeper/config.yml
 ```
 
+Sessions are revoked on the next request once a reloaded config removes the user or changes their password.
+
 Gatekeeper writes its process ID (PID) to a file on startup.
 
 - **PID File Path**: Defaults to `/var/run/gatekeeper.pid` (configure via the `-pid` command flag).

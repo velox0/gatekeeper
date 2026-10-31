@@ -34,6 +34,12 @@ func RequireAuth(next http.Handler, rc *config.ResolvedConfig, store session.Sto
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
+		// revoke sessions whose user was removed or changed password
+		if credential, exists := rc.UserCredential(sess.User); !exists || credential != sess.Credential {
+			store.Delete(c.Value)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
 		// inject headers for upstream
 		r.Header.Set("X-User", sess.User)
 		r.Header.Set("X-Authenticated", "true")

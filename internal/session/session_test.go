@@ -8,7 +8,7 @@ import (
 func TestStoreCreateGetDelete(t *testing.T) {
 	store := NewInMemoryStore()
 
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestStoreCreateGetDelete(t *testing.T) {
 func TestStoreGetRemovesExpiredSession(t *testing.T) {
 	store := NewInMemoryStore()
 
-	sess, err := store.Create("admin", -time.Second)
+	sess, err := store.Create("admin", "", -time.Second)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -54,13 +54,13 @@ func TestReapRemovesExpiredSessions(t *testing.T) {
 	store := NewInMemoryStore()
 
 	// Create an expired session.
-	_, err := store.Create("expired-user", -time.Second)
+	_, err := store.Create("expired-user", "", -time.Second)
 	if err != nil {
 		t.Fatalf("Create error: %v", err)
 	}
 
 	// Create a valid session.
-	valid, err := store.Create("valid-user", time.Hour)
+	valid, err := store.Create("valid-user", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create error: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestReapRemovesExpiredSessions(t *testing.T) {
 func TestReapLeavesActiveSessions(t *testing.T) {
 	store := NewInMemoryStore()
 
-	_, err := store.Create("active-user", time.Hour)
+	_, err := store.Create("active-user", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create error: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestConcurrentCreateAndGet(t *testing.T) {
 	done := make(chan *Session, n)
 	for i := 0; i < n; i++ {
 		go func() {
-			sess, err := store.Create("user", time.Hour)
+			sess, err := store.Create("user", "", time.Hour)
 			if err != nil {
 				t.Errorf("Create error: %v", err)
 			}

@@ -13,7 +13,7 @@ func TestFileStorePersistsSessionsAcrossInstances(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileStore returned error: %v", err)
 	}
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", "fingerprint", time.Hour)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestFileStorePersistsSessionsAcrossInstances(t *testing.T) {
 		t.Fatalf("reload returned error: %v", err)
 	}
 	got, ok := reloaded.Get(sess.ID)
-	if !ok || got.User != "admin" {
+	if !ok || got.User != "admin" || got.Credential != "fingerprint" {
 		t.Fatalf("reloaded session = %+v, %v", got, ok)
 	}
 
@@ -42,7 +42,7 @@ func TestFileStoreDeletePersists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileStore returned error: %v", err)
 	}
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestFileStoreDropsExpiredSessionsOnLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileStore returned error: %v", err)
 	}
-	if _, err := store.Create("admin", -time.Second); err != nil {
+	if _, err := store.Create("admin", "", -time.Second); err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
 
@@ -87,7 +87,7 @@ func TestNewStoreFromEnvIsolatesNamespaces(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second store: %v", err)
 	}
-	sess, err := first.Create("admin", time.Hour)
+	sess, err := first.Create("admin", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}

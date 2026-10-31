@@ -140,7 +140,7 @@ func TestLogoutClearsSessionAndCookie(t *testing.T) {
 	handler, store := newTestHandler(t)
 
 	// Create a session first.
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", "", time.Hour)
 	if err != nil {
 		t.Fatalf("Create session: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestLogoutGetClearsSessionAndRedirects(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/logout", nil)
 			var sessionID string
 			if withSession {
-				sess, err := store.Create("admin", time.Hour)
+				sess, err := store.Create("admin", "", time.Hour)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -200,7 +200,7 @@ func TestLogoutGetClearsSessionAndRedirects(t *testing.T) {
 
 func TestLogoutRejectsUnsupportedMethod(t *testing.T) {
 	handler, store := newTestHandler(t)
-	sess, err := store.Create("admin", time.Hour)
+	sess, err := store.Create("admin", "", time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}

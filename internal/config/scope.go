@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"sync"
@@ -183,6 +185,26 @@ func (rc *ResolvedConfig) GetResolvedUsers() []UserConfig {
 	users := make([]UserConfig, len(rc.Users))
 	copy(users, rc.Users)
 	return users
+}
+
+// CredentialFingerprint derives the value that binds a session to a password
+// hash, so the hash itself is never written to the session store.
+func CredentialFingerprint(passwordHash string) string {
+	sum := sha256.Sum256([]byte(passwordHash))
+	return hex.EncodeToString(sum[:])
+}
+
+// UserCredential returns the current credential fingerprint for username
+// thread-safely. It reports false if the user no longer exists.
+func (rc *ResolvedConfig) UserCredential(username string) (string, bool) {
+	rc.rlock()
+	defer rc.runlock()
+	for i := range rc.Users {
+		if rc.Users[i].Username == username {
+			return CredentialFingerprint(rc.Users[i].PasswordHash), true
+		}
+	}
+	return "", false
 }
 
 // GetResolvedPlugins returns a copy of the resolved plugins map thread-safely.

@@ -136,7 +136,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		sess, err := h.store.Create(username, h.rc.GetSessionTTL())
+		sess, err := h.store.Create(username, config.CredentialFingerprint(string(hash)), h.rc.GetSessionTTL())
 		if err != nil {
 			statuspage.Write(w, http.StatusInternalServerError, h.rc.GetAppName())
 			return

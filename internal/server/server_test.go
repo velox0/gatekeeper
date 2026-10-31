@@ -3,8 +3,11 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/velox0/gatekeeper/internal/config"
 )
@@ -254,4 +257,65 @@ func TestGatewayReload(t *testing.T) {
 	}
 }
 
+func TestGatewayReloadRevokesRemovedUserSessions(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
 
+	hash, err := bcrypt.GenerateFromPassword([]byte("secret"), bcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("generate password hash: %v", err)
+	}
+	cfg := &config.Config{
+		Auth:  config.AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
+		Users: []config.UserConfig{{Username: "admin", PasswordHash: string(hash)}},
+		Listeners: []config.ListenerConfig{
+			{
+				Listen: ":0",
+				Servers: []config.ServerBlock{
+					{
+						ServerName: "app.local",
+						Upstream:   config.UpstreamConfig{Target: upstream.URL},
+					},
+				},
+			},
+		},
+	}
+
+	gw, err := NewGateway(cfg)
+	if err != nil {
+		t.Fatalf("NewGateway error: %v", err)
+	}
+	ln := gw.Listeners()[0]
+
+	login := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("username=admin&password=secret"))
+	login.Host = "app.local"
+	login.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginRec := httptest.NewRecorder()
+	ln.ServeHTTP(loginRec, login)
+	cookies := loginRec.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("login cookies = %d, want 1 (status %d)", len(cookies), loginRec.Code)
+	}
+
+	get := func() int {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Host = "app.local"
+		req.AddCookie(cookies[0])
+		rec := httptest.NewRecorder()
+		ln.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	if code := get(); code != http.StatusNoContent {
+		t.Fatalf("status before removal = %d, want %d", code, http.StatusNoContent)
+	}
+
+	cfg.Users = nil
+	gw.Reload()
+
+	if code := get(); code != http.StatusSeeOther {
+		t.Fatalf("status after removal = %d, want %d", code, http.StatusSeeOther)
+	}
+}
