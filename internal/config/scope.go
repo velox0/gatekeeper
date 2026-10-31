@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -98,6 +99,55 @@ func (rc *ResolvedConfig) GetAuthorizeFavicon() bool {
 	rc.rlock()
 	defer rc.runlock()
 	return authorizeFaviconOrDefault(rc.Security.AuthorizeFavicon)
+}
+
+// ClientIP returns the address of the client that sent r. X-Forwarded-For is
+// honoured only when the connection comes from a trusted proxy, and is read
+// from the right so that entries forged by the client are never reached.
+func (rc *ResolvedConfig) ClientIP(r *http.Request) netip.Addr {
+	remote, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		return netip.Addr{}
+	}
+	client := remote.Addr().Unmap().WithZone("")
+
+	trusted := rc.trustedProxies()
+	if !isTrustedProxy(trusted, client) {
+		return client
+	}
+	hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
+	for i := len(hops) - 1; i >= 0; i-- {
+		hop, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+		if err != nil {
+			break
+		}
+		client = hop.Unmap().WithZone("")
+		if !isTrustedProxy(trusted, client) {
+			break
+		}
+	}
+	return client
+}
+
+func (rc *ResolvedConfig) trustedProxies() []netip.Prefix {
+	rc.rlock()
+	defer rc.runlock()
+	prefixes := make([]netip.Prefix, 0, len(rc.Security.TrustedProxies))
+	for _, proxy := range rc.Security.TrustedProxies {
+		if prefix, err := parseTrustedProxy(proxy); err == nil {
+			prefixes = append(prefixes, prefix)
+		}
+	}
+	return prefixes
+}
+
+func isTrustedProxy(trusted []netip.Prefix, addr netip.Addr) bool {
+	for _, prefix := range trusted {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
 }
 
 // Update updates all fields of the ResolvedConfig thread-safely.

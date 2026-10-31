@@ -25,6 +25,7 @@ Gatekeeper is a lightweight, virtual-host-aware reverse proxy and session authen
 - **Structured Access Logs**: Optionally persists one JSON record per request, including status, size, latency, client address, and authenticated user.
 - **Persistent Error Logs**: Optionally duplicates operational and proxy errors to a restricted append-only file while retaining console output.
 - **Persistent Sessions**: Optionally stores isolated virtual-host sessions on disk with atomic writes and restrictive permissions so logins survive restarts.
+- **Login Rate Limiting**: Blocks repeated failed logins per client IP and per username, including behind trusted reverse proxies.
 
 ---
 
@@ -39,7 +40,7 @@ Gatekeeper merges global settings with listener/server-level configurations usin
 | `users`         | **Union**      | Both global and server-local users are authorized to log in. Local users shadow global users if usernames conflict.    |
 | `plugins`       | **Merge**      | Global plugins are active by default. Server-specific plugin maps can override individual plugins (enable/disable).    |
 | `auth`          | **Override**   | A server-level `auth` block overrides individual global fields (such as `cookie_name` and `session_ttl`).              |
-| `security`      | **Override**   | A server-level `security` block overrides individual global fields such as `secure_cookies`, `same_site`, and `authorize_favicon`. |
+| `security`      | **Override**   | A server-level `security` block overrides individual global fields such as `secure_cookies`, `same_site`, `authorize_favicon`, and `trusted_proxies`. |
 | `upstream`      | **Required**   | Configured per server block. Defines the backend destination URL (e.g. `http://localhost:3000`).                       |
 
 ---
@@ -221,6 +222,23 @@ GATEKEEPER_SESSION_DIR=/var/lib/gatekeeper/sessions gatekeeper -config /etc/gate
 ```
 
 Sessions are revoked on the next request once a reloaded config removes the user or changes their password.
+
+### Login Rate Limiting
+
+Each virtual host allows 20 failed logins per client IP and 10 per username in a 15-minute window. Further attempts receive `429 Too Many Requests` with a `Retry-After` header, even with the correct password. IPv6 clients are grouped by `/64`, and counters are kept in memory, so they reset on restart.
+
+The per-username limit stops distributed password guessing, but it also means that anyone who knows a username can temporarily block that user from logging in. Existing sessions are not affected.
+
+When Gatekeeper runs behind a reverse proxy, list that proxy in `trusted_proxies`. Otherwise every client appears to share the proxy's address and counts against one per-IP limit:
+
+```yaml
+security:
+  trusted_proxies:
+    - 127.0.0.1
+    - 10.0.0.0/8
+```
+
+`X-Forwarded-For` is only honoured for connections from these addresses. Only list proxies that append to the header, and never a range that untrusted clients can connect from.
 
 Gatekeeper writes its process ID (PID) to a file on startup.
 

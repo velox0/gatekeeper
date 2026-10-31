@@ -2,10 +2,14 @@ package auth
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
+	"net/netip"
+	"strconv"
 	"time"
 
 	"github.com/tdewolff/minify/v2"
@@ -17,6 +21,7 @@ import (
 
 	"github.com/velox0/gatekeeper/internal/config"
 	"github.com/velox0/gatekeeper/internal/plugins"
+	"github.com/velox0/gatekeeper/internal/ratelimit"
 	"github.com/velox0/gatekeeper/internal/session"
 	"github.com/velox0/gatekeeper/internal/statuspage"
 )
@@ -31,6 +36,14 @@ var dummyHash = []byte("$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // maxBcryptPasswordLen is the maximum password length bcrypt supports.
 // Passwords longer than this are silently truncated by bcrypt, weakening security.
 const maxBcryptPasswordLen = 72
+
+// Failed login limits. The per-IP limit is higher because clients behind a
+// shared address (an office NAT, for example) all count against it.
+const (
+	maxLoginAttemptsPerIP   = 20
+	maxLoginAttemptsPerUser = 10
+	loginAttemptWindow      = 15 * time.Minute
+)
 
 var loginMinifier = newLoginMinifier()
 
@@ -54,6 +67,9 @@ type Handler struct {
 	rc    *config.ResolvedConfig
 	store session.Store
 	tmpl  *template.Template
+
+	ipLimit   *ratelimit.Limiter
+	userLimit *ratelimit.Limiter
 }
 
 // loginData is the data passed to the login page template.
@@ -77,33 +93,64 @@ func NewHandler(rc *config.ResolvedConfig, store session.Store) (*Handler, error
 	if err != nil {
 		return nil, err
 	}
-	return &Handler{rc: rc, store: store, tmpl: t}, nil
+	return &Handler{
+		rc:        rc,
+		store:     store,
+		tmpl:      t,
+		ipLimit:   ratelimit.New(maxLoginAttemptsPerIP, loginAttemptWindow),
+		userLimit: ratelimit.New(maxLoginAttemptsPerUser, loginAttemptWindow),
+	}, nil
+}
+
+// ipLimitKey groups IPv6 clients by /64, the smallest block usually assigned
+// to a single subscriber.
+func ipLimitKey(ip netip.Addr) string {
+	if ip.Is6() {
+		prefix, _ := ip.Prefix(64)
+		return prefix.String()
+	}
+	return ip.String()
+}
+
+// userLimitKey hashes the submitted username, which is attacker-controlled
+// and may name no real user, so that keys have a fixed size.
+func userLimitKey(username string) string {
+	sum := sha256.Sum256([]byte(username))
+	return string(sum[:])
+}
+
+func (h *Handler) renderLogin(w http.ResponseWriter, status int, msg string) {
+	loaded, err := plugins.LoadEnabled(h.rc.GetResolvedPlugins())
+	if err != nil {
+		log.Printf("warning: failed to load plugin assets: %v", err)
+	}
+	data := loginData{
+		AppName: h.rc.GetAppName(),
+		Error:   msg,
+		Plugins: loaded,
+	}
+	var buf bytes.Buffer
+	if err := h.tmpl.Execute(&buf, data); err != nil {
+		log.Printf("template error: %v", err)
+		statuspage.Write(w, http.StatusInternalServerError, h.rc.GetAppName())
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	if _, err := w.Write(buf.Bytes()); err != nil {
+		return
+	}
+}
+
+func (h *Handler) writeTooManyAttempts(w http.ResponseWriter, retryAfter time.Duration) {
+	w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retryAfter.Seconds()))))
+	h.renderLogin(w, http.StatusTooManyRequests, "Too many login attempts. Try again later.")
 }
 
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		loaded, err := plugins.LoadEnabled(h.rc.GetResolvedPlugins())
-		if err != nil {
-			log.Printf("warning: failed to load plugin assets: %v", err)
-		}
-		data := loginData{
-			AppName: h.rc.GetAppName(),
-			Plugins: loaded,
-		}
-		if msg := r.URL.Query().Get("error"); msg != "" {
-			data.Error = msg
-		}
-		var buf bytes.Buffer
-		if err := h.tmpl.Execute(&buf, data); err != nil {
-			log.Printf("template error: %v", err)
-			statuspage.Write(w, http.StatusInternalServerError, h.rc.GetAppName())
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if _, err := w.Write(buf.Bytes()); err != nil {
-			return
-		}
+		h.renderLogin(w, http.StatusOK, r.URL.Query().Get("error"))
 		return
 	case http.MethodPost:
 		if err := r.ParseForm(); err != nil {
@@ -115,6 +162,20 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		if len(password) > maxBcryptPasswordLen {
 			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
+			return
+		}
+
+		// Limits apply before bcrypt so blocked attempts cost no CPU, and to
+		// unknown usernames so the response does not reveal which ones exist.
+		ipKey := ipLimitKey(h.rc.ClientIP(r))
+		if ok, retryAfter := h.ipLimit.Reserve(ipKey); !ok {
+			h.writeTooManyAttempts(w, retryAfter)
+			return
+		}
+		userKey := userLimitKey(username)
+		if ok, retryAfter := h.userLimit.Reserve(userKey); !ok {
+			h.ipLimit.Release(ipKey)
+			h.writeTooManyAttempts(w, retryAfter)
 			return
 		}
 
@@ -135,6 +196,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login?error=Invalid+credentials", http.StatusSeeOther)
 			return
 		}
+		// Only failed attempts count towards the limits.
+		h.ipLimit.Release(ipKey)
+		h.userLimit.Release(userKey)
 
 		sess, err := h.store.Create(username, config.CredentialFingerprint(string(hash)), h.rc.GetSessionTTL())
 		if err != nil {

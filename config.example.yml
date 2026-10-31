@@ -7,6 +7,7 @@ security:
   secure_cookies: true
   same_site: strict
   authorize_favicon: false
+  # trusted_proxies: [127.0.0.1] # reverse proxies allowed to set X-Forwarded-For
 users:
   - username: test
     password_hash: $2a$10$LcE5wk0JkOscgj2S3p3cq.4f1GS4cW8XrSDDAAweQD29OWKLvt08K
