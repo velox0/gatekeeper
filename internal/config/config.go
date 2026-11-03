@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -39,9 +40,10 @@ type UserConfig struct {
 
 // SecurityConfig controls cookie security flags.
 type SecurityConfig struct {
-	SecureCookies    *bool  `yaml:"secure_cookies,omitempty"`
-	SameSite         string `yaml:"same_site,omitempty"`
-	AuthorizeFavicon *bool  `yaml:"authorize_favicon,omitempty"`
+	SecureCookies    *bool    `yaml:"secure_cookies,omitempty"`
+	SameSite         string   `yaml:"same_site,omitempty"`
+	AuthorizeFavicon *bool    `yaml:"authorize_favicon,omitempty"`
+	TrustedProxies   []string `yaml:"trusted_proxies,omitempty"`
 }
 
 // ServerBlock defines a virtual host within a listener.
@@ -117,7 +119,24 @@ func mergeSecurity(base SecurityConfig, override *SecurityConfig) SecurityConfig
 	if override.AuthorizeFavicon != nil {
 		base.AuthorizeFavicon = override.AuthorizeFavicon
 	}
+	if override.TrustedProxies != nil {
+		base.TrustedProxies = override.TrustedProxies
+	}
 	return base
+}
+
+// parseTrustedProxy accepts a single IP address or a CIDR range.
+func parseTrustedProxy(value string) (netip.Prefix, error) {
+	clean := strings.TrimSpace(value)
+	if prefix, err := netip.ParsePrefix(clean); err == nil {
+		return prefix.Masked(), nil
+	}
+	addr, err := netip.ParseAddr(clean)
+	if err != nil {
+		return netip.Prefix{}, fmt.Errorf("invalid trusted_proxies entry %q (want an IP address or CIDR range)", value)
+	}
+	addr = addr.Unmap().WithZone("")
+	return netip.PrefixFrom(addr, addr.BitLen()), nil
 }
 
 // DisplayName returns AppName if set, or the default "Gatekeeper".
@@ -447,6 +466,11 @@ func validateSecurity(sec SecurityConfig, ctx string) error {
 	}
 	if normalized == "none" && !secureCookiesOrDefault(sec.SecureCookies) {
 		return fmt.Errorf("%s: same_site \"none\" requires secure_cookies=true", ctx)
+	}
+	for _, proxy := range sec.TrustedProxies {
+		if _, err := parseTrustedProxy(proxy); err != nil {
+			return fmt.Errorf("%s: %w", ctx, err)
+		}
 	}
 	return nil
 }

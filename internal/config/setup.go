@@ -16,6 +16,7 @@ security:
   secure_cookies: true
   same_site: strict
   authorize_favicon: false
+  # trusted_proxies: [127.0.0.1] # reverse proxies allowed to set X-Forwarded-For
 users: []
 plugins:
   aurora: false
