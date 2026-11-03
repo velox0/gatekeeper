@@ -46,6 +46,10 @@ type Listener struct {
 // ServeHTTP dispatches incoming requests to the matching virtual host
 // based on the Host header. If no exact match is found, it falls back
 // to the DefaultHost (if configured), otherwise returning a 404.
+//
+// Once a virtual host is chosen, the client address it resolves (honouring
+// its trusted_proxies) is handed to the access log. Requests that match no
+// virtual host are logged with the connection's peer address.
 func (l *Listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host := r.Host
 	// Strip port from Host header
@@ -63,6 +67,7 @@ func (l *Listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	accesslog.SetClientIP(r, vhost.Config.ClientIP(r))
 	vhost.Mux.ServeHTTP(w, r)
 }
 

@@ -2,11 +2,13 @@
 package accesslog
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"sync"
 	"time"
@@ -56,20 +58,39 @@ func OpenFromEnv() (*Logger, error) {
 	return Open(path)
 }
 
-// Wrap records requests handled by next.
+// clientIPKey is the context key for the slot that SetClientIP fills in.
+type clientIPKey struct{}
+
+// SetClientIP records addr as the client address logged for r, in place of
+// the connection's peer address. Callers pass an address they have already
+// resolved, such as the result of (*config.ResolvedConfig).ClientIP, which
+// knows which proxies to trust. It must be called before the handler for r
+// returns, and does nothing when r is not being logged or addr is invalid.
+func SetClientIP(r *http.Request, addr netip.Addr) {
+	slot, ok := r.Context().Value(clientIPKey{}).(*netip.Addr)
+	if ok && addr.IsValid() {
+		*slot = addr
+	}
+}
+
+// Wrap records requests handled by next. The logged remote address is the
+// one passed to SetClientIP while handling the request, or the connection's
+// peer address when no handler set one.
 func (l *Logger) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		var clientIP netip.Addr
+		r = r.WithContext(context.WithValue(r.Context(), clientIPKey{}, &clientIP))
 		next.ServeHTTP(rw, r)
 
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			host = r.RemoteAddr
+		remote := clientIP.String()
+		if !clientIP.IsValid() {
+			remote = peerHost(r.RemoteAddr)
 		}
 		l.write(entry{
 			Timestamp:  started.UTC(),
-			RemoteAddr: host,
+			RemoteAddr: remote,
 			Method:     r.Method,
 			Host:       r.Host,
 			Path:       r.URL.RequestURI(),
@@ -79,6 +100,15 @@ func (l *Logger) Wrap(next http.Handler) http.Handler {
 			User:       r.Header.Get("X-User"),
 		})
 	})
+}
+
+// peerHost strips the port from a connection's remote address.
+func peerHost(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
 }
 
 func (l *Logger) write(e entry) {
