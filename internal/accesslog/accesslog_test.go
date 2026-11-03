@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"testing"
 )
 
@@ -52,4 +53,65 @@ func TestWrapDefaultsStatusToOK(t *testing.T) {
 	if got.Status != http.StatusOK {
 		t.Fatalf("Status = %d, want %d", got.Status, http.StatusOK)
 	}
+}
+
+func TestWrapLogsClientIPSetByHandler(t *testing.T) {
+	var out bytes.Buffer
+	logger := &Logger{out: &out}
+	handler := logger.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		SetClientIP(r, netip.MustParseAddr("198.51.100.7"))
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "http://app.local/", nil)
+	req.RemoteAddr = "10.0.0.1:1234"
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if got := decodeEntry(t, &out).RemoteAddr; got != "198.51.100.7" {
+		t.Fatalf("RemoteAddr = %q, want 198.51.100.7", got)
+	}
+}
+
+func TestWrapIgnoresForwardedHeaderWithoutClientIP(t *testing.T) {
+	var out bytes.Buffer
+	logger := &Logger{out: &out}
+	handler := logger.Wrap(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+
+	req := httptest.NewRequest(http.MethodGet, "http://app.local/", nil)
+	req.RemoteAddr = "[2001:db8::1]:1234"
+	req.Header.Set("X-Forwarded-For", "198.51.100.7")
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if got := decodeEntry(t, &out).RemoteAddr; got != "2001:db8::1" {
+		t.Fatalf("RemoteAddr = %q, want 2001:db8::1", got)
+	}
+}
+
+func TestWrapIgnoresInvalidClientIP(t *testing.T) {
+	var out bytes.Buffer
+	logger := &Logger{out: &out}
+	handler := logger.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		SetClientIP(r, netip.Addr{})
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "http://app.local/", nil)
+	req.RemoteAddr = "192.0.2.10:1234"
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if got := decodeEntry(t, &out).RemoteAddr; got != "192.0.2.10" {
+		t.Fatalf("RemoteAddr = %q, want 192.0.2.10", got)
+	}
+}
+
+func TestSetClientIPWithoutLoggerIsNoop(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://app.local/", nil)
+	SetClientIP(req, netip.MustParseAddr("198.51.100.7"))
+}
+
+func decodeEntry(t *testing.T, out *bytes.Buffer) entry {
+	t.Helper()
+	var got entry
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode log entry: %v", err)
+	}
+	return got
 }

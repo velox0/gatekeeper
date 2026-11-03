@@ -205,6 +205,8 @@ Set `GATEKEEPER_ACCESS_LOG` to a file path to append structured JSON access logs
 GATEKEEPER_ACCESS_LOG=/var/log/gatekeeper/access.log gatekeeper -config /etc/gatekeeper/config.yml
 ```
 
+Each record's `remote_addr` is the client address as resolved by the matching server block. For connections from one of its `trusted_proxies` (see [Login Rate Limiting](#login-rate-limiting)), that is the rightmost `X-Forwarded-For` entry that is not itself a trusted proxy; otherwise it is the connection's peer address. Requests whose `Host` matches no server block are logged with the peer address, because no `trusted_proxies` list applies to them.
+
 ### Error Logs
 
 Set `GATEKEEPER_ERROR_LOG` to a file path to append runtime and proxy errors while continuing to emit them to standard error.
@@ -238,7 +240,7 @@ security:
     - 10.0.0.0/8
 ```
 
-`X-Forwarded-For` is only honoured for connections from these addresses. Only list proxies that append to the header, and never a range that untrusted clients can connect from.
+`X-Forwarded-For` is only honoured for connections from these addresses. Only list proxies that append to the header, and never a range that untrusted clients can connect from. The same resolved address is recorded as `remote_addr` in the [access log](#access-logs).
 
 Gatekeeper writes its process ID (PID) to a file on startup.
 

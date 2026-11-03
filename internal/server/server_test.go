@@ -1,14 +1,21 @@
 package server
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/velox0/gatekeeper/internal/accesslog"
 	"github.com/velox0/gatekeeper/internal/config"
 )
 
@@ -317,5 +324,89 @@ func TestGatewayReloadRevokesRemovedUserSessions(t *testing.T) {
 
 	if code := get(); code != http.StatusSeeOther {
 		t.Fatalf("status after removal = %d, want %d", code, http.StatusSeeOther)
+	}
+}
+
+func TestAccessLogRecordsResolvedClientIP(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "access.log")
+	t.Setenv(accesslog.EnvPath, logPath)
+
+	cfg := &config.Config{
+		Auth:     config.AuthConfig{CookieName: "gk", SessionTTL: time.Hour},
+		Security: config.SecurityConfig{TrustedProxies: []string{"10.0.0.1"}},
+		Listeners: []config.ListenerConfig{
+			{
+				Listen: ":0",
+				Servers: []config.ServerBlock{
+					{
+						ServerName: "app.local",
+						Upstream:   config.UpstreamConfig{Target: "http://localhost:3000"},
+					},
+					{
+						ServerName: "direct.local",
+						Upstream:   config.UpstreamConfig{Target: "http://localhost:4000"},
+						Security:   &config.SecurityConfig{TrustedProxies: []string{}},
+					},
+				},
+			},
+		},
+	}
+
+	gw, err := NewGateway(cfg)
+	if err != nil {
+		t.Fatalf("NewGateway error: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := gw.Shutdown(context.Background()); err != nil {
+			t.Errorf("Shutdown error: %v", err)
+		}
+	})
+	handler := gw.Listeners()[0].Server.Handler
+
+	cases := []struct {
+		name       string
+		host       string
+		remote     string
+		wantStatus int
+		want       string
+	}{
+		{name: "trusted proxy", host: "app.local", remote: "10.0.0.1:5555", wantStatus: http.StatusOK, want: "198.51.100.7"},
+		{name: "untrusted peer", host: "app.local", remote: "203.0.113.9:5555", wantStatus: http.StatusOK, want: "203.0.113.9"},
+		{name: "vhost without trusted proxies", host: "direct.local", remote: "10.0.0.1:5555", wantStatus: http.StatusOK, want: "10.0.0.1"},
+		{name: "unmatched host", host: "unknown.local", remote: "10.0.0.1:5555", wantStatus: http.StatusNotFound, want: "10.0.0.1"},
+	}
+	for _, tc := range cases {
+		req := httptest.NewRequest(http.MethodGet, "/health", nil)
+		req.Host = tc.host
+		req.RemoteAddr = tc.remote
+		req.Header.Set("X-Forwarded-For", "198.51.100.7")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != tc.wantStatus {
+			t.Fatalf("%s: status = %d, want %d", tc.name, rec.Code, tc.wantStatus)
+		}
+	}
+
+	f, err := os.Open(logPath)
+	if err != nil {
+		t.Fatalf("open access log: %v", err)
+	}
+	defer f.Close()
+	dec := json.NewDecoder(f)
+	for _, tc := range cases {
+		var got struct {
+			RemoteAddr string `json:"remote_addr"`
+			Host       string `json:"host"`
+		}
+		if err := dec.Decode(&got); err != nil {
+			t.Fatalf("%s: decode access log entry: %v", tc.name, err)
+		}
+		if got.Host != tc.host || got.RemoteAddr != tc.want {
+			t.Errorf("%s: logged host %q remote_addr %q, want host %q remote_addr %q", tc.name, got.Host, got.RemoteAddr, tc.host, tc.want)
+		}
+	}
+	var extra json.RawMessage
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+		t.Fatalf("unexpected extra access log entry: %s (err %v)", extra, err)
 	}
 }
